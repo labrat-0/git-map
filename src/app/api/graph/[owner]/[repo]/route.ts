@@ -7,7 +7,8 @@ import { GraphSchema, type Graph } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const MAX_COMMITS = 300;
+const MAX_BRANCHES = 25;
+const MAX_COMMITS = 500;
 const PER_PAGE = 100;
 
 export async function GET(
@@ -28,43 +29,67 @@ export async function GET(
     const { data: repoInfo } = await octokit.rest.repos.get({ owner, repo });
     const defaultBranch = repoInfo.default_branch;
 
+    // List branches sorted by most-recently-updated, cap at MAX_BRANCHES.
     const { data: branchData } = await octokit.rest.repos.listBranches({
       owner,
       repo,
-      per_page: PER_PAGE,
+      sort: "updated" as never,
+      per_page: MAX_BRANCHES,
     });
     const branches: RawBranch[] = branchData.map((b) => ({
       name: b.name,
       sha: b.commit.sha,
     }));
 
-    const commits: RawCommit[] = [];
+    // Accumulate commits across all branches into a deduplicated map.
+    const commitMap = new Map<string, RawCommit>();
     let truncated = false;
-    for (let page = 1; commits.length < MAX_COMMITS; page++) {
-      const { data } = await octokit.rest.repos.listCommits({
-        owner,
-        repo,
-        sha: defaultBranch,
-        per_page: PER_PAGE,
-        page,
-      });
-      if (data.length === 0) break;
-      for (const c of data) {
-        commits.push({
-          sha: c.sha,
-          parents: c.parents.map((p) => p.sha),
-          message: c.commit.message,
-          author: c.commit.author?.name ?? c.author?.login ?? null,
-          date: c.commit.author?.date ?? null,
-        });
-      }
-      if (data.length < PER_PAGE) break;
-      if (commits.length >= MAX_COMMITS) {
+
+    outer: for (const branch of branches) {
+      if (commitMap.size >= MAX_COMMITS) {
         truncated = true;
         break;
       }
+      try {
+        for (let page = 1; ; page++) {
+          const { data } = await octokit.rest.repos.listCommits({
+            owner,
+            repo,
+            sha: branch.sha,
+            per_page: PER_PAGE,
+            page,
+          });
+          for (const c of data) {
+            if (commitMap.has(c.sha)) continue;
+            commitMap.set(c.sha, {
+              sha: c.sha,
+              parents: c.parents.map((p) => p.sha),
+              message: c.commit.message,
+              author: c.commit.author?.name ?? c.author?.login ?? null,
+              date: c.commit.author?.date ?? null,
+            });
+            if (commitMap.size >= MAX_COMMITS) {
+              truncated = true;
+              break outer;
+            }
+          }
+          if (data.length < PER_PAGE) break;
+        }
+      } catch (err: unknown) {
+        // 403 = rate-limited; return what we have so far.
+        const status =
+          typeof err === "object" && err && "status" in err
+            ? (err as { status: number }).status
+            : 0;
+        if (status === 403) {
+          truncated = true;
+          break;
+        }
+        throw err;
+      }
     }
 
+    const commits = Array.from(commitMap.values());
     const { nodes, edges } = buildGraph(commits, branches);
     const laidOut = layoutGraph(nodes, edges);
 
