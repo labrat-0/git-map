@@ -5,6 +5,7 @@ export interface RawCommit {
   parents: string[];
   message: string;
   author: string | null;
+  authorLogin: string | null;
   date: string | null;
 }
 
@@ -115,6 +116,7 @@ export function buildGraph(
       label: c.sha.slice(0, 7),
       summary: firstLine(c.message),
       author: c.author,
+      authorLogin: c.authorLogin,
       date: c.date,
       branches,
       position: { x: 0, y: 0 },
@@ -133,6 +135,7 @@ export function buildGraph(
       label: `${sorted.length} commits`,
       summary: newest ? firstLine(newest.message) : "",
       author: newest?.author ?? null,
+      authorLogin: newest?.authorLogin ?? null,
       date: newest?.date ?? null,
       branches: [],
       position: { x: 0, y: 0 },

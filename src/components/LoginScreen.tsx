@@ -1,20 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { LogIn } from "lucide-react";
 import { toast } from "sonner";
-
-interface Node {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-}
+import { ParticleField } from "./ParticleField";
 
 export function LoginScreen() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
   // Preserve existing error-toast behavior from OAuth redirect.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -23,102 +14,9 @@ export function LoginScreen() {
     if (err === "oauth_token") toast.error("GitHub rejected the sign-in.");
   }, []);
 
-  // Animated git-topology node graph on canvas.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const NODE_COUNT = 25;
-    const EDGE_MAX_DIST = 130;
-    let W = 0;
-    let H = 0;
-    let animId: number;
-    let nodes: Node[] = [];
-
-    function resize() {
-      const newW = canvas!.offsetWidth;
-      const newH = canvas!.offsetHeight;
-      if (newW === 0 || newH === 0) return;
-      const wasZero = W === 0 || H === 0;
-      W = canvas!.width = newW;
-      H = canvas!.height = newH;
-      if (wasZero) initNodes();
-    }
-
-    function initNodes() {
-      nodes = Array.from({ length: NODE_COUNT }, () => ({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        r: Math.random() * 2 + 1.5,
-      }));
-    }
-
-    function draw() {
-      ctx!.clearRect(0, 0, W, H);
-
-      // Draw edges between nearby nodes.
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[i].x - nodes[j].x;
-          const dy = nodes[i].y - nodes[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < EDGE_MAX_DIST) {
-            const alpha = (1 - dist / EDGE_MAX_DIST) * 0.13;
-            ctx!.strokeStyle = `rgba(0,255,65,${alpha})`;
-            ctx!.lineWidth = 0.7;
-            ctx!.beginPath();
-            ctx!.moveTo(nodes[i].x, nodes[i].y);
-            ctx!.lineTo(nodes[j].x, nodes[j].y);
-            ctx!.stroke();
-          }
-        }
-      }
-
-      // Draw nodes: filled circle + outer ring.
-      for (const n of nodes) {
-        ctx!.fillStyle = "rgba(0,255,65,0.18)";
-        ctx!.beginPath();
-        ctx!.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx!.fill();
-
-        ctx!.strokeStyle = "rgba(0,255,65,0.22)";
-        ctx!.lineWidth = 0.5;
-        ctx!.beginPath();
-        ctx!.arc(n.x, n.y, n.r + 3, 0, Math.PI * 2);
-        ctx!.stroke();
-
-        // Update position, wrap at edges.
-        n.x += n.vx;
-        n.y += n.vy;
-        if (n.x < -20) n.x = W + 20;
-        if (n.x > W + 20) n.x = -20;
-        if (n.y < -20) n.y = H + 20;
-        if (n.y > H + 20) n.y = -20;
-      }
-
-      animId = requestAnimationFrame(draw);
-    }
-
-    resize();
-    animId = requestAnimationFrame(draw);
-
-    const ro = new ResizeObserver(() => resize());
-    ro.observe(canvas);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      ro.disconnect();
-    };
-  }, []);
-
   return (
     <main className="h-screen w-screen relative overflow-hidden flex items-center justify-center bg-black">
-      {/* Animated background canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <ParticleField className="absolute inset-0 w-full h-full" />
 
       {/* Center content */}
       <div className="relative z-10 flex flex-col items-center text-center">

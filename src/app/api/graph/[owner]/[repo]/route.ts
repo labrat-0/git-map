@@ -66,6 +66,7 @@ export async function GET(
               parents: c.parents.map((p) => p.sha),
               message: c.commit.message,
               author: c.commit.author?.name ?? c.author?.login ?? null,
+              authorLogin: c.author?.login ?? null,
               date: c.commit.author?.date ?? null,
             });
             if (commitMap.size >= MAX_COMMITS) {
