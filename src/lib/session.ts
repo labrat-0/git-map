@@ -10,16 +10,7 @@ export interface SessionData {
   oauthState?: string;
 }
 
-const password = process.env.SESSION_SECRET;
-if (!password || password.length < 32) {
-  throw new Error(
-    "[session] SESSION_SECRET env var is missing or shorter than 32 characters. " +
-    "Set it in .env.local (dev) or via `fly secrets set SESSION_SECRET=...` (prod)."
-  );
-}
-
-export const sessionOptions: SessionOptions = {
-  password,
+const SESSION_COOKIE: Pick<SessionOptions, "cookieName" | "cookieOptions"> = {
   cookieName: "gitmap_session",
   cookieOptions: {
     httpOnly: true,
@@ -30,6 +21,13 @@ export const sessionOptions: SessionOptions = {
 };
 
 export async function getSession() {
+  const password = process.env.SESSION_SECRET;
+  if (!password || password.length < 32) {
+    throw new Error(
+      "[session] SESSION_SECRET env var is missing or shorter than 32 characters. " +
+      "Set it in .env.local (dev) or via `fly secrets set SESSION_SECRET=...` (prod)."
+    );
+  }
   const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getIronSession<SessionData>(cookieStore, { ...SESSION_COOKIE, password });
 }
