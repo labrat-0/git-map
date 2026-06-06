@@ -72,6 +72,11 @@ body {
   animation: gm-rise 0.18s ease-out both;
 }
 
+@keyframes gm-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.15); }
+}
+
 /* Crisp 1px borders that survive transforms: shadow, not border. */
 .brand-edge {
   box-shadow: 0 0 0 1px var(--line);

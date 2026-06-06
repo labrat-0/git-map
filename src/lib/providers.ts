@@ -133,6 +133,106 @@ export async function listModels(
   }
 }
 
+/**
+ * Stream a completion token-by-token. Falls back to complete() for Google
+ * (Gemini browser streaming is not worth the complexity).
+ */
+export async function completeStream(
+  p: ProviderDef,
+  key: string,
+  baseUrl: string,
+  model: string,
+  system: string,
+  user: string,
+  onToken: (text: string) => void,
+): Promise<void> {
+  if (p.family === "google") {
+    const text = await complete(p, key, baseUrl, model, system, user);
+    onToken(text);
+    return;
+  }
+  try {
+    let res: Response;
+    if (p.family === "anthropic") {
+      res = await fetch(`${baseUrl}/messages`, {
+        method: "POST",
+        headers: { ...authHeaders(p, key), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          max_tokens: 400,
+          stream: true,
+          system,
+          messages: [{ role: "user", content: user }],
+        }),
+      });
+    } else {
+      res = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          ...authHeaders(p, key),
+          "Content-Type": "application/json",
+          "HTTP-Referer":
+            typeof window !== "undefined" ? window.location.origin : "",
+          "X-Title": "git-map",
+        },
+        body: JSON.stringify({
+          model,
+          stream: true,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: 0.2,
+          max_tokens: 400,
+        }),
+      });
+    }
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    if (!res.body) throw new Error("No response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") return;
+        try {
+          const json = JSON.parse(data) as Record<string, unknown>;
+          let token = "";
+          if (p.family === "anthropic") {
+            if (
+              json.type === "content_block_delta" &&
+              (json.delta as Record<string, unknown>)?.type === "text_delta"
+            ) {
+              token =
+                ((json.delta as Record<string, unknown>).text as string) ?? "";
+            }
+          } else {
+            token =
+              (
+                (json.choices as Array<{ delta: { content?: string } }>)?.[0]
+                  ?.delta?.content
+              ) ?? "";
+          }
+          if (token) onToken(token);
+        } catch {
+          // malformed JSON chunk — skip
+        }
+      }
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`${msg}${corsHint(p)}`);
+  }
+}
+
 /** Run a single completion. Returns the raw assistant text. */
 export async function complete(
   p: ProviderDef,

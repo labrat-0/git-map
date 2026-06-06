@@ -6,7 +6,7 @@ import type { MapNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** React Flow node data is the MapNode minus the fields RF owns. */
-export type MapNodeData = Omit<MapNode, "position">;
+export type MapNodeData = Omit<MapNode, "position"> & { jumpLabel?: string };
 
 const icon = {
   commit: null,
@@ -22,11 +22,18 @@ export function MapNodeView({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "brand-edge w-[220px] h-[64px] px-3 py-2 flex flex-col justify-center gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-hidden",
+        "brand-edge w-[220px] h-[64px] px-3 py-2 flex flex-col justify-center gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-hidden relative",
         "hover:brand-edge-invert hover:bg-[var(--hover-bg)] hover:text-[var(--hover-fg)]",
         selected && "brand-edge-invert bg-[var(--hover-bg)] text-[var(--hover-fg)]",
       )}
     >
+      {node.jumpLabel && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+          <span className="font-mono text-[18px] font-bold tracking-widest text-white">
+            {node.jumpLabel}
+          </span>
+        </div>
+      )}
       <Handle type="target" position={Position.Top} className="!bg-foreground !border-0 !w-1.5 !h-1.5" />
       <div className="flex items-center gap-1.5 min-w-0">
         {Icon ? <Icon size={12} className="shrink-0" /> : null}

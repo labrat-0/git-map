@@ -5,11 +5,18 @@ import { CommitDiffSchema, type CommitDiff } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+const SHA_RE = /^[0-9a-f]{7,40}$/i;
+
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ owner: string; repo: string; sha: string }> },
 ) {
   const { owner, repo, sha } = await ctx.params;
+
+  if (!SHA_RE.test(sha)) {
+    return NextResponse.json({ error: "invalid sha" }, { status: 400 });
+  }
+
   const octokit = await getOctokit();
   if (!octokit) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
@@ -48,8 +55,9 @@ export async function GET(
       headers: { "Cache-Control": "public, max-age=31536000, immutable" },
     });
   } catch (err: unknown) {
+    console.error("[diff]", err);
     return NextResponse.json(
-      { error: "failed to fetch diff", detail: String(err) },
+      { error: "failed to fetch diff" },
       { status: 500 },
     );
   }

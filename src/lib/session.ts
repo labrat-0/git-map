@@ -12,14 +12,14 @@ export interface SessionData {
 
 const password = process.env.SESSION_SECRET;
 if (!password || password.length < 32) {
-  // Fail loud in dev; on Fly this comes from `fly secrets set SESSION_SECRET=...`.
-  console.warn(
-    "[session] SESSION_SECRET missing or <32 chars. Set it in .env.local (dev) or fly secrets (prod).",
+  throw new Error(
+    "[session] SESSION_SECRET env var is missing or shorter than 32 characters. " +
+    "Set it in .env.local (dev) or via `fly secrets set SESSION_SECRET=...` (prod)."
   );
 }
 
 export const sessionOptions: SessionOptions = {
-  password: password ?? "dev-only-insecure-password-change-me-32chars",
+  password,
   cookieName: "gitmap_session",
   cookieOptions: {
     httpOnly: true,
