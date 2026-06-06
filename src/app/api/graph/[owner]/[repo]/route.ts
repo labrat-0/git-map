@@ -109,8 +109,9 @@ export async function GET(
       typeof err === "object" && err && "status" in err
         ? (err as { status: number }).status
         : 500;
+    console.error("[graph]", err);
     return NextResponse.json(
-      { error: "failed to build graph", detail: String(err) },
+      { error: "failed to build graph" },
       { status: status === 404 ? 404 : 500 },
     );
   }
