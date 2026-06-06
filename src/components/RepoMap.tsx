@@ -2,7 +2,6 @@
 
 import { forwardRef, useImperativeHandle, useMemo } from "react";
 import {
-  Background,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -12,14 +11,17 @@ import {
   type NodeMouseHandler,
 } from "@xyflow/react";
 import { MapNodeView } from "./nodes/MapNodeView";
+import { MapContext } from "./nodes/MapContext";
+import { NeonFlowEdge } from "./edges/NeonFlowEdge";
+import { ParticleField } from "./ParticleField";
 import type { Graph, MapNode } from "@/lib/types";
 import { NODE_WIDTH, NODE_HEIGHT } from "@/lib/layout";
 
 const nodeTypes = { map: MapNodeView };
+const edgeTypes = { neonFlow: NeonFlowEdge };
 
 const edgeOptions = {
-  type: "step" as const,
-  style: { stroke: "#ffffff", strokeWidth: 1 },
+  type: "neonFlow" as const,
 };
 
 export interface RepoMapHandle {
@@ -99,6 +101,7 @@ function RepoMapInner({
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodeClick={handleNodeClick}
       onlyRenderVisibleElements
       fitView
@@ -109,7 +112,15 @@ function RepoMapInner({
       nodesConnectable={false}
       elementsSelectable
     >
-      <Background color="#1a1a1a" gap={24} size={1} />
+      <ParticleField
+        nodeCount={12}
+        edgeAlphaScale={0.45}
+        nodeAlphaFill={0.07}
+        nodeAlphaRing={0.09}
+        speedScale={0.55}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 0 }}
+      />
       <Controls showInteractive={false} />
     </ReactFlow>
   );
@@ -118,9 +129,13 @@ function RepoMapInner({
 export const RepoMap = forwardRef<RepoMapHandle, RepoMapProps>(
   function RepoMap(props, ref) {
     return (
-      <ReactFlowProvider>
-        <RepoMapInner {...props} handleRef={ref} />
-      </ReactFlowProvider>
+      <MapContext.Provider
+        value={{ owner: props.graph?.owner ?? "", repo: props.graph?.repo ?? "" }}
+      >
+        <ReactFlowProvider>
+          <RepoMapInner {...props} handleRef={ref} />
+        </ReactFlowProvider>
+      </MapContext.Provider>
     );
   },
 );

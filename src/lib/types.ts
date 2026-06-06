@@ -26,6 +26,7 @@ export const MapNodeSchema = z.object({
   /** First line of the (newest) commit message. */
   summary: z.string(),
   author: z.string().nullable(),
+  authorLogin: z.string().nullable(),
   date: z.string().nullable(),
   /** Branch names whose tip is this commit. */
   branches: z.array(z.string()),

@@ -2,7 +2,7 @@ import dagre from "@dagrejs/dagre";
 import type { MapEdge, MapNode } from "./types";
 
 export const NODE_WIDTH = 220;
-export const NODE_HEIGHT = 64;
+export const NODE_HEIGHT = 88;
 
 /**
  * Run dagre top-down (newer commits on top) and write integer positions back
