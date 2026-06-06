@@ -38,8 +38,13 @@ export function LoginScreen() {
     let nodes: Node[] = [];
 
     function resize() {
-      W = canvas!.width = canvas!.offsetWidth;
-      H = canvas!.height = canvas!.offsetHeight;
+      const newW = canvas!.offsetWidth;
+      const newH = canvas!.offsetHeight;
+      if (newW === 0 || newH === 0) return;
+      const wasZero = W === 0 || H === 0;
+      W = canvas!.width = newW;
+      H = canvas!.height = newH;
+      if (wasZero) initNodes();
     }
 
     function initNodes() {
@@ -99,8 +104,7 @@ export function LoginScreen() {
     }
 
     resize();
-    initNodes();
-    draw();
+    animId = requestAnimationFrame(draw);
 
     const ro = new ResizeObserver(() => resize());
     ro.observe(canvas);
