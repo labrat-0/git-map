@@ -2,7 +2,7 @@
 
 import type { CommitDiff } from "./types";
 import { getBaseUrl, getKey, getModel, getProviderId, isConfigured } from "./byok";
-import { complete, getProviderDef } from "./providers";
+import { complete, completeStream, getProviderDef } from "./providers";
 
 /** Keep prompts cheap: cap the diff payload. */
 const MAX_DIFF_CHARS = 12_000;
@@ -30,6 +30,14 @@ function buildDiffText(diff: CommitDiff): string {
   return out;
 }
 
+function parseBullets(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 /**
  * Summarize a commit diff into 3 plain-English bullets using the user's
  * selected provider + key, called directly from the browser.
@@ -48,9 +56,34 @@ export async function summarizeDiff(diff: CommitDiff): Promise<string[]> {
     SYSTEM_PROMPT,
     buildDiffText(diff),
   );
-  return text
-    .split("\n")
-    .map((l) => l.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  return parseBullets(text);
+}
+
+/**
+ * Same as summarizeDiff but streams tokens via onToken as they arrive.
+ * Returns the final parsed bullets once the stream is complete.
+ */
+export async function summarizeDiffStream(
+  diff: CommitDiff,
+  onToken: (token: string) => void,
+): Promise<string[]> {
+  if (!isConfigured()) {
+    throw new Error("AI not configured. Open Settings to pick a provider/model.");
+  }
+  const id = getProviderId();
+  const def = getProviderDef(id);
+  let fullText = "";
+  await completeStream(
+    def,
+    getKey(id),
+    getBaseUrl(id),
+    getModel(id),
+    SYSTEM_PROMPT,
+    buildDiffText(diff),
+    (token) => {
+      fullText += token;
+      onToken(token);
+    },
+  );
+  return parseBullets(fullText);
 }

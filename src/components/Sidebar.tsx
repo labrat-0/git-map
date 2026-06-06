@@ -12,6 +12,7 @@ export function Sidebar({
   onSelect,
   login,
   onOpenSettings,
+  className,
 }: {
   repos: Repo[];
   loading: boolean;
@@ -19,6 +20,7 @@ export function Sidebar({
   onSelect: (repo: Repo) => void;
   login: string | null;
   onOpenSettings: () => void;
+  className?: string;
 }) {
   const [query, setQuery] = useState("");
 
@@ -29,7 +31,7 @@ export function Sidebar({
   }, [repos, query]);
 
   return (
-    <aside className="w-72 shrink-0 h-full flex flex-col border-r border-white bg-background">
+    <aside className={cn("w-72 shrink-0 h-full flex flex-col border-r border-white bg-background", className)}>
       <div className="h-11 shrink-0 px-4 border-b border-white flex items-center justify-between">
         <span className="font-mono text-[13px] tracking-tight flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}

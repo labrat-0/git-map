@@ -7,8 +7,9 @@ import {
 } from "./providers";
 
 /**
- * BYOK config lives ONLY in the browser (localStorage). Keys are stored
- * per-provider so switching providers keeps each key. Nothing is sent to the
+ * BYOK config lives ONLY in the browser. Provider selection (localStorage)
+ * persists across sessions, but API keys, base URLs, and model selections
+ * (sessionStorage) are cleared on browser close. Nothing is sent to the
  * git-map server — completions go browser -> provider directly.
  */
 const P_KEY = "gitmap.provider";
@@ -31,31 +32,31 @@ export function setProviderId(id: ProviderId): void {
 
 export function getKey(id: ProviderId): string {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(key(id)) ?? "";
+  return window.sessionStorage.getItem(key(id)) ?? "";
 }
 export function setKey(id: ProviderId, v: string): void {
-  window.localStorage.setItem(key(id), v.trim());
+  window.sessionStorage.setItem(key(id), v.trim());
 }
 export function clearKey(id: ProviderId): void {
-  window.localStorage.removeItem(key(id));
+  window.sessionStorage.removeItem(key(id));
 }
 
 export function getBaseUrl(id: ProviderId): string {
   const def = getProviderDef(id);
   if (typeof window === "undefined") return def.defaultBaseUrl;
-  return window.localStorage.getItem(baseKey(id)) || def.defaultBaseUrl;
+  return window.sessionStorage.getItem(baseKey(id)) || def.defaultBaseUrl;
 }
 export function setBaseUrl(id: ProviderId, v: string): void {
-  window.localStorage.setItem(baseKey(id), v.trim());
+  window.sessionStorage.setItem(baseKey(id), v.trim());
 }
 
 export function getModel(id: ProviderId): string {
   const def = getProviderDef(id);
   if (typeof window === "undefined") return def.defaultModel;
-  return window.localStorage.getItem(modelKey(id)) || def.defaultModel;
+  return window.sessionStorage.getItem(modelKey(id)) || def.defaultModel;
 }
 export function setModel(id: ProviderId, v: string): void {
-  window.localStorage.setItem(modelKey(id), v.trim());
+  window.sessionStorage.setItem(modelKey(id), v.trim());
 }
 
 /** Is the current provider configured enough to summarize? */

@@ -10,7 +10,7 @@ export const NODE_HEIGHT = 64;
  */
 export function layoutGraph(nodes: MapNode[], edges: MapEdge[]): MapNode[] {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 48, ranksep: 64, marginx: 32, marginy: 32 });
+  g.setGraph({ rankdir: "TB", nodesep: 64, ranksep: 80, marginx: 48, marginy: 48 });
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const n of nodes) {
