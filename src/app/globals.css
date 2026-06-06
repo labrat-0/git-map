@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+/*
+  ratlabs.tech design language — strict monochrome.
+  Absolute black, 1px white, zero radius, invert on hover/active.
+*/
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --line: #ffffff;
+  --muted: #8a8a8a;
+  --hover-bg: #ffffff;
+  --hover-fg: #000000;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Sharp brand: kill all rounding. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Crisp 1px borders that survive transforms: shadow, not border. */
+.brand-edge {
+  box-shadow: 0 0 0 1px var(--line);
+}
+.brand-edge-invert {
+  background: var(--hover-bg);
+  color: var(--hover-fg);
+}
+
+/* React Flow surface = pitch black, monochrome controls/edges. */
+.react-flow {
+  background: #000000;
+}
+.react-flow__edge-path {
+  stroke: #ffffff;
+  stroke-width: 1;
+}
+.react-flow__background {
+  background: #000000;
+}
+.react-flow__controls {
+  box-shadow: 0 0 0 1px #ffffff;
+}
+.react-flow__controls-button {
+  background: #000000;
+  color: #ffffff;
+  border-bottom: 1px solid #ffffff;
+  fill: #ffffff;
+}
+.react-flow__controls-button:hover {
+  background: #ffffff;
+  fill: #000000;
+}
+.react-flow__attribution {
+  background: transparent;
+  color: #555555;
+}
+
+/* Thin monochrome scrollbars. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+}
