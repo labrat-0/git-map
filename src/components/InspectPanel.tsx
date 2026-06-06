@@ -4,14 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import type { CommitDiff, MapNode } from "@/lib/types";
-import { summarizeDiff } from "@/lib/llm";
+import { summarizeDiffStream } from "@/lib/llm";
 import { getModel, getProviderId, isConfigured } from "@/lib/byok";
 import { cn } from "@/lib/utils";
+import { Skeleton, SkeletonLines } from "./Skeleton";
 
-/**
- * Right column. Always mounted (fixed-width, full-height). Shows an empty state
- * when nothing is selected; otherwise the clicked node's diff + optional AI summary.
- */
 export function InspectPanel({
   node,
   owner,
@@ -28,6 +25,7 @@ export function InspectPanel({
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string[] | null>(null);
   const [summarizing, setSummarizing] = useState(false);
+  const [streamText, setStreamText] = useState<string>("");
 
   // Reset the manual pick when the selected node changes (render-time reset).
   const [prevNodeId, setPrevNodeId] = useState<string | undefined>(undefined);
@@ -46,6 +44,7 @@ export function InspectPanel({
     setPrevSha(activeSha);
     setDiff(null);
     setSummary(null);
+    setStreamText("");
     setLoading(!!(activeSha && owner && repo));
   }
 
@@ -73,16 +72,21 @@ export function InspectPanel({
     const cacheKey = `gitmap.summary.${diff.sha}.${getProviderId()}.${getModel(getProviderId())}`;
     const cached = window.localStorage.getItem(cacheKey);
     if (cached) {
-      setSummary(JSON.parse(cached));
+      setSummary(JSON.parse(cached) as string[]);
       return;
     }
     setSummarizing(true);
+    setStreamText("");
     try {
-      const bullets = await summarizeDiff(diff);
+      const bullets = await summarizeDiffStream(diff, (token) => {
+        setStreamText((t) => t + token);
+      });
       setSummary(bullets);
+      setStreamText("");
       window.localStorage.setItem(cacheKey, JSON.stringify(bullets));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Summarize failed");
+      setStreamText("");
     } finally {
       setSummarizing(false);
     }
@@ -156,11 +160,16 @@ export function InspectPanel({
           {!activeSha && (
             <div className="px-4 py-4 col-eyebrow">select a commit above</div>
           )}
+
+          {/* Diff loading skeleton. */}
           {loading && (
-            <div className="px-4 py-4 font-mono text-[11px] text-[var(--muted)]">
-              loading diff…
+            <div className="px-4 py-4 space-y-4">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+              <SkeletonLines count={6} />
             </div>
           )}
+
           {diff && (
             <div className="gm-rise">
               <div className="px-4 py-3 border-b border-white/20">
@@ -193,6 +202,18 @@ export function InspectPanel({
                 </button>
               </div>
 
+              {/* Streaming text (live preview while summarizing). */}
+              {summarizing && streamText && (
+                <div className="m-3 px-3 py-2.5 brand-edge">
+                  <div className="col-eyebrow mb-1.5">AI summary · streaming</div>
+                  <pre className="text-[11px] leading-snug font-mono whitespace-pre-wrap text-[var(--muted)]">
+                    {streamText}
+                    <span className="animate-pulse">▋</span>
+                  </pre>
+                </div>
+              )}
+
+              {/* Finalized bullets. */}
               {summary && (
                 <div className="m-3 px-3 py-2.5 brand-edge gm-rise">
                   <div className="col-eyebrow mb-1.5">AI summary · your key</div>
