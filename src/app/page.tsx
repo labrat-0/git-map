@@ -17,6 +17,7 @@ import { SkeletonMap } from "@/components/Skeleton";
 import { CommandSearch } from "@/components/CommandSearch";
 import type { Graph, MapNode, Repo } from "@/lib/types";
 import { NODE_WIDTH, NODE_HEIGHT } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 
 type AuthState = "loading" | "in" | "out";
 
@@ -84,6 +85,15 @@ export default function Home() {
   const [jumpMode, setJumpMode] = useState(false);
   const [jumpBuffer, setJumpBuffer] = useState("");
   const [jumpLabels, setJumpLabels] = useState<Map<string, string>>(new Map());
+
+  // Mobile tab (only active below md breakpoint).
+  const [mobileTab, setMobileTab] = useState<"repos" | "map" | "inspect">("map");
+  // Auto-switch to inspect on mobile when a node is selected (render-time reset).
+  const [prevSelectedNode, setPrevSelectedNode] = useState<MapNode | null>(null);
+  if (selectedNode !== prevSelectedNode) {
+    setPrevSelectedNode(selectedNode);
+    if (selectedNode) setMobileTab("inspect");
+  }
 
   const [{ repo: urlRepo, sha: urlSha }] = useState(readUrlParams);
   const urlRestoredRef = useRef(false);
@@ -319,91 +329,138 @@ export default function Home() {
 
   const nodeCount = displayGraph?.nodes.length ?? 0;
 
-  return (
-    <main className="h-screen w-screen flex overflow-hidden">
-      <Sidebar
-        repos={repos}
-        loading={reposLoading}
-        selectedFullName={selectedRepo?.fullName ?? null}
-        onSelect={selectRepo}
-        login={login}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
+  const mobileTabs = [
+    { id: "repos" as const, label: "repos" },
+    { id: "map" as const, label: "map" },
+    { id: "inspect" as const, label: "inspect" },
+  ];
 
-      <section className="flex-1 min-w-0 flex flex-col">
-        <header className="h-11 shrink-0 border-b border-white flex items-center justify-between px-4">
-          <div className="min-w-0 flex items-baseline gap-3">
-            <span className="col-eyebrow">map</span>
-            {selectedRepo ? (
-              <span className="font-mono text-[12px] truncate">
-                {selectedRepo.fullName}
-              </span>
-            ) : (
-              <span className="font-mono text-[12px] text-[var(--muted)]">
-                no repo selected
-              </span>
-            )}
-          </div>
-          {selectedRepo && graph && (
-            <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] text-[var(--muted)]">
-              {branchNames.length > 1 && (
-                <select
-                  value={focusBranch}
-                  onChange={(e) => setFocusBranch(e.target.value)}
-                  className="bg-background text-foreground font-mono text-[10px] px-1.5 py-0.5 cursor-pointer focus:outline-none"
-                  style={{ boxShadow: "0 0 0 1px #fff" }}
-                  aria-label="Branch focus"
-                >
-                  <option value="">all branches</option>
-                  {branchNames.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {branchNames.length === 1 && (
-                <span className="brand-edge px-1.5 py-0.5">
-                  {branchNames[0]}
+  return (
+    <main className="h-screen w-screen flex flex-col overflow-hidden">
+      {/* Main content area */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {/* LEFT — repos */}
+        <Sidebar
+          repos={repos}
+          loading={reposLoading}
+          selectedFullName={selectedRepo?.fullName ?? null}
+          onSelect={(r) => { selectRepo(r); setMobileTab("map"); }}
+          login={login}
+          onOpenSettings={() => setSettingsOpen(true)}
+          className={cn(
+            mobileTab === "repos" ? "flex" : "hidden",
+            "md:flex w-full md:w-72",
+          )}
+        />
+
+        {/* MIDDLE — map */}
+        <section
+          className={cn(
+            "flex-1 min-w-0 flex flex-col",
+            mobileTab === "map" ? "flex" : "hidden",
+            "md:flex",
+          )}
+        >
+          <header className="h-11 shrink-0 border-b border-white flex items-center justify-between px-4">
+            <div className="min-w-0 flex items-baseline gap-3">
+              <span className="col-eyebrow">map</span>
+              {selectedRepo ? (
+                <span className="font-mono text-[12px] truncate">
+                  {selectedRepo.fullName}
+                </span>
+              ) : (
+                <span className="font-mono text-[12px] text-[var(--muted)]">
+                  no repo selected
                 </span>
               )}
-              <span>{nodeCount} nodes</span>
-              {graph.truncated && (
-                <span className="brand-edge px-1.5 py-0.5">truncated</span>
-              )}
-              <span
-                className="brand-edge px-1.5 py-0.5 cursor-default"
-                title="/ search · h/j/k/l navigate · f jump labels · zz center · za fit all"
-              >
-                / search
-              </span>
             </div>
-          )}
-        </header>
+            {selectedRepo && graph && (
+              <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] text-[var(--muted)]">
+                {branchNames.length > 1 && (
+                  <select
+                    value={focusBranch}
+                    onChange={(e) => setFocusBranch(e.target.value)}
+                    className="bg-background text-foreground font-mono text-[10px] px-1.5 py-0.5 cursor-pointer focus:outline-none"
+                    style={{ boxShadow: "0 0 0 1px #fff" }}
+                    aria-label="Branch focus"
+                  >
+                    <option value="">all branches</option>
+                    {branchNames.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {branchNames.length === 1 && (
+                  <span className="brand-edge px-1.5 py-0.5">
+                    {branchNames[0]}
+                  </span>
+                )}
+                <span>{nodeCount} nodes</span>
+                {graph.truncated && (
+                  <span className="brand-edge px-1.5 py-0.5">truncated</span>
+                )}
+                <span
+                  className="brand-edge px-1.5 py-0.5 cursor-default hidden md:inline"
+                  title="/ search · h/j/k/l navigate · f jump labels · zz center · za fit all"
+                >
+                  / search
+                </span>
+              </div>
+            )}
+          </header>
 
-        <div className="flex-1 min-h-0 relative">
-          {!selectedRepo && (
-            <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)] pointer-events-none">
-              select a repo →
-            </div>
-          )}
-          {selectedRepo && graphLoading && <SkeletonMap />}
-          <RepoMap
-            ref={mapRef}
-            graph={displayGraph}
-            selectedNodeId={selectedNode?.id ?? null}
-            onSelectNode={setSelectedNode}
-            jumpLabels={activeJumpLabels}
-          />
-        </div>
-      </section>
+          <div className="flex-1 min-h-0 relative">
+            {!selectedRepo && (
+              <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)] pointer-events-none">
+                select a repo →
+              </div>
+            )}
+            {selectedRepo && graphLoading && <SkeletonMap />}
+            <RepoMap
+              ref={mapRef}
+              graph={displayGraph}
+              selectedNodeId={selectedNode?.id ?? null}
+              onSelectNode={(n) => { setSelectedNode(n); setMobileTab("inspect"); }}
+              jumpLabels={activeJumpLabels}
+            />
+          </div>
+        </section>
 
-      <InspectPanel
-        node={selectedNode}
-        owner={selectedRepo?.owner ?? null}
-        repo={selectedRepo?.name ?? null}
-        onClose={() => setSelectedNode(null)}
-      />
+        {/* RIGHT — inspect */}
+        <InspectPanel
+          node={selectedNode}
+          owner={selectedRepo?.owner ?? null}
+          repo={selectedRepo?.name ?? null}
+          onClose={() => setSelectedNode(null)}
+          className={cn(
+            mobileTab === "inspect" ? "flex" : "hidden",
+            "md:flex w-full md:w-[420px]",
+          )}
+        />
+      </div>
+
+      {/* Mobile tab bar — hidden at md+ */}
+      <nav className="md:hidden shrink-0 h-12 border-t border-white flex">
+        {mobileTabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setMobileTab(t.id)}
+            className={cn(
+              "flex-1 font-mono text-[11px] transition-colors",
+              t.id === mobileTab
+                ? "bg-white text-black"
+                : "text-[var(--muted)] hover:text-foreground",
+            )}
+          >
+            {t.label}
+            {t.id === "inspect" && selectedNode && (
+              <span className="ml-1 font-mono text-[9px]">●</span>
+            )}
+          </button>
+        ))}
+      </nav>
 
       <ByokSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
@@ -417,7 +474,7 @@ export default function Home() {
       )}
 
       {jumpMode && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 font-mono text-[11px] brand-edge px-3 py-1.5 bg-background">
+        <div className="fixed bottom-16 md:bottom-4 left-1/2 -translate-x-1/2 z-40 font-mono text-[11px] brand-edge px-3 py-1.5 bg-background">
           jump: {jumpBuffer || "type a label…"}{" "}
           <span className="text-[var(--muted)]">esc to cancel</span>
         </div>

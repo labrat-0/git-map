@@ -14,11 +14,13 @@ export function InspectPanel({
   owner,
   repo,
   onClose,
+  className,
 }: {
   node: MapNode | null;
   owner: string | null;
   repo: string | null;
   onClose: () => void;
+  className?: string;
 }) {
   const [picked, setPicked] = useState<string | null>(null);
   const [diff, setDiff] = useState<CommitDiff | null>(null);
@@ -93,7 +95,7 @@ export function InspectPanel({
   }, [diff]);
 
   return (
-    <aside className="w-[420px] shrink-0 h-full flex flex-col border-l border-white bg-background">
+    <aside className={cn("w-[420px] shrink-0 h-full flex flex-col border-l border-white bg-background", className)}>
       {/* Header — always present. */}
       <header className="h-11 shrink-0 border-b border-white flex items-center justify-between px-4">
         <div className="flex items-baseline gap-3 min-w-0">
