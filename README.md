@@ -43,7 +43,7 @@ of **ratlabs.tech** (via CNAME / subdomain) once stable.
 Browser (Next.js / React Flow)
    |  httpOnly session cookie (GitHub token NEVER exposed to client JS)
    v
-Next.js API routes (server, deployed on Vercel)
+Next.js API routes (server, single Next app deployed on Fly.io)
    |- /api/auth/login                 -> redirect to GitHub OAuth (CSRF `state`)
    |- /api/auth/callback              -> exchange code->token (client_secret server-side), set session
    |- /api/repos                      -> list the user's PUBLIC repos (Octokit)
@@ -59,12 +59,28 @@ key. The key lives only in browser `localStorage` (explicit local-only disclosur
 The operator server never sees the key or the request/response. This is the core liability
 guarantee — keep it intact.
 
-### Deployment reality
+### Deployment — Fly.io (single Next app)
 
 The existing site `labrat-0.github.io` is a **static GitHub Pages** site and **cannot** host
-OAuth token exchange (needs `client_secret`) or API routes. `git-map` is therefore a **separate
-Vercel deployment** under a ratlabs.tech subdomain, linked from the main site. Do not try to
-host the OAuth/server pieces on the static Pages site.
+OAuth token exchange (needs `client_secret`) or API routes. `git-map` is therefore deployed to
+**Fly.io** as a **single Next.js app** (UI + API routes + OAuth in one container), reached at
+`gitmap.ratlabs.tech` via a CNAME to the Fly app + `fly certs`.
+
+Mirrors the `nota/server` Fly conventions: `Dockerfile` build, `primary_region = "iad"`,
+`[http_service]` on `internal_port` 3000, `force_https = true`, `auto_start_machines`,
+`min_machines_running = 1`, `[[http_service.checks]]` health check (`/api/health`). No volume
+mount in v1 (no DB yet).
+
+- **Dockerfile:** Next.js standalone output (`output: "standalone"`), `node:22-alpine`,
+  multi-stage (deps -> build -> runner), `CMD ["node", "server.js"]`, `EXPOSE 3000`.
+- **fly.toml:** app `git-map`, shape mirrors `nota/server`.
+- **Secrets** via `fly secrets set` (never committed): `GITHUB_CLIENT_ID`,
+  `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, `OAUTH_CALLBACK_URL`.
+
+**Owner setup (one-time):** `fly auth login`; `fly apps create git-map`; register the GitHub
+OAuth App with prod callback `https://gitmap.ratlabs.tech/api/auth/callback` (and a localhost
+callback for dev); `fly secrets set …`; add DNS CNAME `gitmap` -> `git-map.fly.dev` then
+`fly certs add gitmap.ratlabs.tech`.
 
 ## Tech stack
 
@@ -102,7 +118,7 @@ Mirrors the existing `ratlabs-cc` house stack for consistency:
 ## Caching (v1, minimal)
 
 - Commit diffs are immutable (SHA = content) -> cache `/api/diff` by SHA via `Cache-Control:
-  immutable` + Vercel data cache. No DB needed.
+  immutable` + an in-process LRU (single long-lived Fly machine). No DB needed.
 - Graph responses: short TTL per repo (history changes on push).
 - AI summaries: cached client-side in `localStorage`, keyed by `sha + model`. A shared
   Redis SHA-cache to dedup public-repo summaries across users is a possible future addition.
@@ -115,8 +131,8 @@ Mirrors the existing `ratlabs-cc` house stack for consistency:
 - OpenRouter / LLM key: **browser-only**, never sent to the operator server, never logged.
   The LLM call goes browser -> provider directly.
 - v1 is public repos only -> no private code or diffs pass through the operator.
-- Secrets (`client_secret`, session signing secret) live in environment variables on Vercel,
-  never committed. `.env.local` is gitignored.
+- Secrets (`client_secret`, session signing secret) live in Fly secrets (`fly secrets set`),
+  never committed. `.env.local` is gitignored for local dev.
 
 ## Local development (once scaffolded)
 
@@ -136,7 +152,7 @@ npm run lint           # eslint
 ```
 
 Register a GitHub OAuth App (Settings -> Developer settings -> OAuth Apps) with the callback
-URL above for local testing; add a second callback URL for the Vercel domain when deploying.
+URL above for local testing; add a second callback URL for `https://gitmap.ratlabs.tech/api/auth/callback` when deploying to Fly.
 
 ## For the agent picking this up
 
