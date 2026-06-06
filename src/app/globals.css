@@ -38,10 +38,38 @@ html,
 body {
   background: var(--background);
   color: var(--foreground);
+  height: 100%;
+  /* Static app shell — the page itself never scrolls. */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   font-family: var(--font-sans);
+}
+
+/* Column header label — uppercase mono eyebrow. */
+.col-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Staggered content reveal for panel bodies. */
+@keyframes gm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.gm-rise {
+  animation: gm-rise 0.18s ease-out both;
 }
 
 /* Crisp 1px borders that survive transforms: shadow, not border. */
@@ -82,16 +110,21 @@ body {
   color: #555555;
 }
 
-/* Thin monochrome scrollbars. */
+/* Ultra-thin monochrome scrollbars — present but near-invisible, so panels can
+   scroll internally while the shell still reads as static. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a transparent;
+}
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: #2a2a2a;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #ffffff;

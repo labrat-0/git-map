@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/Sidebar";
 import { RepoMap } from "@/components/RepoMap";
-import { DiffDrawer } from "@/components/DiffDrawer";
+import { InspectPanel } from "@/components/InspectPanel";
 import { ByokSettings } from "@/components/ByokSettings";
 import { LoginScreen } from "@/components/LoginScreen";
 import type { Graph, MapNode, Repo } from "@/lib/types";
@@ -66,7 +66,7 @@ export default function Home() {
 
   if (auth === "loading") {
     return (
-      <main className="flex-1 flex items-center justify-center font-mono text-[12px] text-[var(--muted)]">
+      <main className="h-screen w-screen flex items-center justify-center font-mono text-[12px] text-[var(--muted)]">
         loading…
       </main>
     );
@@ -76,8 +76,11 @@ export default function Home() {
     return <LoginScreen />;
   }
 
+  const nodeCount = graph?.nodes.length ?? 0;
+
   return (
-    <main className="flex-1 flex h-screen overflow-hidden">
+    <main className="h-screen w-screen flex overflow-hidden">
+      {/* LEFT — repos */}
       <Sidebar
         repos={repos}
         loading={reposLoading}
@@ -87,25 +90,55 @@ export default function Home() {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="flex-1 relative">
-        {!selectedRepo && (
-          <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)]">
-            select a repo
+      {/* MIDDLE — map */}
+      <section className="flex-1 min-w-0 flex flex-col">
+        <header className="h-11 shrink-0 border-b border-white flex items-center justify-between px-4">
+          <div className="min-w-0 flex items-baseline gap-3">
+            <span className="col-eyebrow">map</span>
+            {selectedRepo ? (
+              <span className="font-mono text-[12px] truncate">
+                {selectedRepo.fullName}
+              </span>
+            ) : (
+              <span className="font-mono text-[12px] text-[var(--muted)]">
+                no repo selected
+              </span>
+            )}
           </div>
-        )}
-        {selectedRepo && graphLoading && (
-          <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)] z-10">
-            building map…
-          </div>
-        )}
-        <RepoMap
-          graph={graph}
-          selectedNodeId={selectedNode?.id ?? null}
-          onSelectNode={setSelectedNode}
-        />
-      </div>
+          {selectedRepo && graph && (
+            <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] text-[var(--muted)]">
+              <span className="brand-edge px-1.5 py-0.5">
+                {graph.defaultBranch}
+              </span>
+              <span>{nodeCount} nodes</span>
+              {graph.truncated && (
+                <span className="brand-edge px-1.5 py-0.5">truncated</span>
+              )}
+            </div>
+          )}
+        </header>
 
-      <DiffDrawer
+        <div className="flex-1 min-h-0 relative">
+          {!selectedRepo && (
+            <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)] pointer-events-none">
+              select a repo →
+            </div>
+          )}
+          {selectedRepo && graphLoading && (
+            <div className="absolute inset-0 flex items-center justify-center font-mono text-[12px] text-[var(--muted)] z-10 pointer-events-none">
+              building map…
+            </div>
+          )}
+          <RepoMap
+            graph={graph}
+            selectedNodeId={selectedNode?.id ?? null}
+            onSelectNode={setSelectedNode}
+          />
+        </div>
+      </section>
+
+      {/* RIGHT — inspect */}
+      <InspectPanel
         node={selectedNode}
         owner={selectedRepo?.owner ?? null}
         repo={selectedRepo?.name ?? null}

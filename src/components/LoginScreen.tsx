@@ -13,7 +13,7 @@ export function LoginScreen() {
   }, []);
 
   return (
-    <main className="flex-1 flex items-center justify-center">
+    <main className="h-screen w-screen flex items-center justify-center">
       <div className="brand-edge max-w-md w-full mx-4 p-8 flex flex-col gap-5">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

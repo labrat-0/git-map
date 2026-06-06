@@ -30,8 +30,8 @@ export function Sidebar({
 
   return (
     <aside className="w-72 shrink-0 h-full flex flex-col border-r border-white bg-background">
-      <div className="px-3 py-3 border-b border-white flex items-center justify-between">
-        <span className="font-mono text-sm tracking-tight flex items-center gap-2">
+      <div className="h-11 shrink-0 px-4 border-b border-white flex items-center justify-between">
+        <span className="font-mono text-[13px] tracking-tight flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/icon_32x32.png" alt="" width={16} height={16} />
           git-map
@@ -45,24 +45,25 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="px-3 py-2 border-b border-white flex items-center gap-2">
-        <Search size={14} className="text-[var(--muted)]" />
+      <div className="shrink-0 px-4 py-2 border-b border-white flex items-center gap-2">
+        <Search size={13} className="text-[var(--muted)] shrink-0" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="filter repos"
-          className="bg-transparent outline-none text-[12px] font-mono flex-1 placeholder:text-[var(--muted)]"
+          className="bg-transparent outline-none text-[12px] font-mono flex-1 min-w-0 placeholder:text-[var(--muted)]"
         />
+        <span className="col-eyebrow shrink-0">{filtered.length}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {loading && (
-          <div className="px-3 py-3 text-[11px] font-mono text-[var(--muted)]">
+          <div className="px-4 py-3 font-mono text-[11px] text-[var(--muted)]">
             loading repos…
           </div>
         )}
         {!loading && filtered.length === 0 && (
-          <div className="px-3 py-3 text-[11px] font-mono text-[var(--muted)]">
+          <div className="px-4 py-3 font-mono text-[11px] text-[var(--muted)]">
             no public repos
           </div>
         )}
@@ -73,34 +74,36 @@ export function Sidebar({
               key={r.fullName}
               onClick={() => onSelect(r)}
               className={cn(
-                "w-full text-left px-3 py-2 border-b border-white/20 transition-colors",
+                "w-full text-left px-4 py-2 border-b border-white/10 transition-colors group",
                 "hover:bg-white hover:text-black",
                 active && "bg-white text-black",
               )}
             >
-              <div className="font-mono text-[12px] truncate">{r.name}</div>
-              <div
-                className={cn(
-                  "text-[10px] truncate",
-                  active ? "text-black/70" : "text-[var(--muted)]",
-                )}
-              >
-                {r.owner}
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-[12px] truncate">{r.name}</span>
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-[10px] font-mono shrink-0",
+                    active ? "text-black/60" : "text-[var(--muted)]",
+                  )}
+                >
+                  <Star size={9} /> {r.stars}
+                </span>
               </div>
               <div
                 className={cn(
-                  "flex items-center gap-1 text-[10px] font-mono mt-0.5",
-                  active ? "text-black/70" : "text-[var(--muted)]",
+                  "text-[10px] truncate",
+                  active ? "text-black/60" : "text-[var(--muted)]",
                 )}
               >
-                <Star size={9} /> {r.stars}
+                {r.owner}
               </div>
             </button>
           );
         })}
       </div>
 
-      <div className="px-3 py-2 border-t border-white flex items-center justify-between">
+      <div className="shrink-0 px-4 py-2 border-t border-white flex items-center justify-between">
         <span className="font-mono text-[11px] truncate">
           {login ? `@${login}` : ""}
         </span>
