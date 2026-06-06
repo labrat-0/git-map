@@ -1,36 +1,67 @@
 "use client";
 
+import {
+  getProviderDef,
+  type ProviderId,
+  PROVIDERS,
+} from "./providers";
+
 /**
- * BYOK key + model live ONLY in the browser (localStorage). They are never sent
- * to the git-map server. The summarize call goes browser -> OpenRouter directly.
+ * BYOK config lives ONLY in the browser (localStorage). Keys are stored
+ * per-provider so switching providers keeps each key. Nothing is sent to the
+ * git-map server — completions go browser -> provider directly.
  */
-const KEY_STORAGE = "gitmap.openrouter.key";
-const MODEL_STORAGE = "gitmap.openrouter.model";
+const P_KEY = "gitmap.provider";
+const key = (id: ProviderId) => `gitmap.key.${id}`;
+const baseKey = (id: ProviderId) => `gitmap.baseurl.${id}`;
+const modelKey = (id: ProviderId) => `gitmap.model.${id}`;
 
-export const DEFAULT_MODEL = "google/gemini-2.0-flash-001";
-
-export function getKey(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(KEY_STORAGE);
+function isProviderId(v: string | null): v is ProviderId {
+  return !!v && PROVIDERS.some((p) => p.id === v);
 }
 
-export function setKey(key: string): void {
-  window.localStorage.setItem(KEY_STORAGE, key.trim());
+export function getProviderId(): ProviderId {
+  if (typeof window === "undefined") return "openrouter";
+  const v = window.localStorage.getItem(P_KEY);
+  return isProviderId(v) ? v : "openrouter";
+}
+export function setProviderId(id: ProviderId): void {
+  window.localStorage.setItem(P_KEY, id);
 }
 
-export function clearKey(): void {
-  window.localStorage.removeItem(KEY_STORAGE);
+export function getKey(id: ProviderId): string {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(key(id)) ?? "";
+}
+export function setKey(id: ProviderId, v: string): void {
+  window.localStorage.setItem(key(id), v.trim());
+}
+export function clearKey(id: ProviderId): void {
+  window.localStorage.removeItem(key(id));
 }
 
-export function getModel(): string {
-  if (typeof window === "undefined") return DEFAULT_MODEL;
-  return window.localStorage.getItem(MODEL_STORAGE) ?? DEFAULT_MODEL;
+export function getBaseUrl(id: ProviderId): string {
+  const def = getProviderDef(id);
+  if (typeof window === "undefined") return def.defaultBaseUrl;
+  return window.localStorage.getItem(baseKey(id)) || def.defaultBaseUrl;
+}
+export function setBaseUrl(id: ProviderId, v: string): void {
+  window.localStorage.setItem(baseKey(id), v.trim());
 }
 
-export function setModel(model: string): void {
-  window.localStorage.setItem(MODEL_STORAGE, model.trim() || DEFAULT_MODEL);
+export function getModel(id: ProviderId): string {
+  const def = getProviderDef(id);
+  if (typeof window === "undefined") return def.defaultModel;
+  return window.localStorage.getItem(modelKey(id)) || def.defaultModel;
+}
+export function setModel(id: ProviderId, v: string): void {
+  window.localStorage.setItem(modelKey(id), v.trim());
 }
 
-export function hasKey(): boolean {
-  return !!getKey();
+/** Is the current provider configured enough to summarize? */
+export function isConfigured(): boolean {
+  const id = getProviderId();
+  const def = getProviderDef(id);
+  const hasKey = !def.needsKey || !!getKey(id);
+  return hasKey && !!getModel(id);
 }

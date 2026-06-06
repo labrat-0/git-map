@@ -5,7 +5,7 @@ import { Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import type { CommitDiff, MapNode } from "@/lib/types";
 import { summarizeDiff } from "@/lib/llm";
-import { getModel, hasKey } from "@/lib/byok";
+import { getModel, getProviderId, isConfigured } from "@/lib/byok";
 import { cn } from "@/lib/utils";
 
 /**
@@ -66,11 +66,11 @@ export function InspectPanel({
 
   const onSummarize = useCallback(async () => {
     if (!diff) return;
-    if (!hasKey()) {
-      toast.error("Add an OpenRouter key in Settings first.");
+    if (!isConfigured()) {
+      toast.error("Open Settings to pick an AI provider + model first.");
       return;
     }
-    const cacheKey = `gitmap.summary.${diff.sha}.${getModel()}`;
+    const cacheKey = `gitmap.summary.${diff.sha}.${getProviderId()}.${getModel(getProviderId())}`;
     const cached = window.localStorage.getItem(cacheKey);
     if (cached) {
       setSummary(JSON.parse(cached));
@@ -176,11 +176,11 @@ export function InspectPanel({
                 </div>
                 <button
                   onClick={onSummarize}
-                  disabled={summarizing || !hasKey()}
+                  disabled={summarizing || !isConfigured()}
                   title={
-                    hasKey()
+                    isConfigured()
                       ? "Summarize with AI"
-                      : "Add an OpenRouter key in Settings"
+                      : "Pick an AI provider + model in Settings"
                   }
                   className={cn(
                     "mt-3 brand-edge px-2.5 py-1 text-[11px] font-mono inline-flex items-center gap-1.5",
