@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   title: "git-map",
   description:
     "Interactive 2D map of any GitHub repo's branch/commit topology.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/icon_32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icons/icon_16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/icons/icon_180x180.png", sizes: "180x180" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

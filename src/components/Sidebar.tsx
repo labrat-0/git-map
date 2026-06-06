@@ -31,7 +31,11 @@ export function Sidebar({
   return (
     <aside className="w-72 shrink-0 h-full flex flex-col border-r border-white bg-background">
       <div className="px-3 py-3 border-b border-white flex items-center justify-between">
-        <span className="font-mono text-sm tracking-tight">git-map</span>
+        <span className="font-mono text-sm tracking-tight flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/icon_32x32.png" alt="" width={16} height={16} />
+          git-map
+        </span>
         <button
           onClick={onOpenSettings}
           className="brand-edge p-1 hover:brand-edge-invert hover:bg-white hover:text-black"

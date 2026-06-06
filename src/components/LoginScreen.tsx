@@ -16,6 +16,14 @@ export function LoginScreen() {
     <main className="flex-1 flex items-center justify-center">
       <div className="brand-edge max-w-md w-full mx-4 p-8 flex flex-col gap-5">
         <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/icon_192x192.png"
+            alt="git-map"
+            width={56}
+            height={56}
+            className="mb-3 brand-edge"
+          />
           <h1 className="font-mono text-2xl tracking-tight">git-map</h1>
           <p className="text-[13px] text-[var(--muted)] mt-2 leading-snug">
             An interactive 2D map of any GitHub repo&apos;s branch and commit
