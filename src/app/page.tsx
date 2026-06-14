@@ -251,7 +251,7 @@ export default function Home() {
             if (nodeId && graph) {
               const node = graph.nodes.find((n) => n.id === nodeId);
               if (node) {
-                mapRef.current?.flyToId(node.id);
+                mapRef.current?.flyTo(node.position);
                 setSelectedNode(node);
               }
             }
@@ -272,7 +272,7 @@ export default function Home() {
       }
 
       if (twoKey === "zz" && selectedNode) {
-        mapRef.current?.flyToId(selectedNode.id);
+        mapRef.current?.flyTo(selectedNode.position);
         return;
       }
       if (twoKey === "za") {
@@ -293,7 +293,7 @@ export default function Home() {
         const next = nearestInDir(visibleNodes, current, dirs[e.key]);
         if (next) {
           setSelectedNode(next);
-          mapRef.current?.flyToId(next.id);
+          mapRef.current?.flyTo(next.position);
         }
         return;
       }
