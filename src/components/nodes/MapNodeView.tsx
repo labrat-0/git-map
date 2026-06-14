@@ -56,9 +56,9 @@ export function MapNodeView({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "brand-edge w-[220px] h-[88px] px-3 py-2 flex flex-col justify-start gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-hidden relative",
+        "map-node-3d w-[220px] h-[88px] px-3 py-2 flex flex-col justify-start gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-hidden relative",
         "hover:brand-edge-invert hover:bg-[var(--hover-bg)] hover:text-[var(--hover-fg)]",
-        selected && "brand-edge-invert bg-[var(--hover-bg)] text-[var(--hover-fg)]",
+        selected && "brand-edge-invert is-selected bg-[var(--hover-bg)] text-[var(--hover-fg)]",
       )}
       style={{
         filter: selected
