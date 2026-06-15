@@ -29,10 +29,14 @@ P0 = current sprint.
 7. ✅ Drill into a run — already handled by InspectPanel's commit list.
 
 ## P2 — bigger bets
-8. Private-repo opt-in (second OAuth scope tier).
-9. AI range/branch/whole-repo summaries — `llm.ts`.
-10. "Load more history" time-windowed pagination past the 500 cap.
-11. Persistent/shared cache (Upstash Redis or Fly volume).
+8. ⏸️ Private-repo opt-in — DEFERRED (2026-06-15). OAuth Apps only offer the
+   broad `repo` scope (read+write all private); not worth the grant. Revisit via
+   a fine-grained GitHub App if private mapping is ever needed.
+9. ✅ AI run/range summary — `llm.ts` `summarizeRun`, surfaced in InspectPanel.
+10. ⏸️ "Load more history" past 500 — DEFERRED (2026-06-15). Needs GraphQL
+    cursors + graph merge + re-layout; low payoff for most repos.
+11. ⏸️ Persistent/shared cache — DEFERRED (2026-06-15). In-memory LRU is adequate
+    (survives between requests; only lost on redeploy; graphs have 60s TTL).
 
 ## P3 — polish/infra
 12. Error boundaries + richer empty/error states.
