@@ -70,4 +70,40 @@ describe("buildGraph", () => {
     expect(nodes).toHaveLength(1);
     expect(nodes[0].id).toBe("only");
   });
+
+  it("keeps a tagged commit discrete and surfaces the tag", () => {
+    // Without the tag, mid would collapse into a run.
+    const commits = [
+      c("head", ["mid"]),
+      c("mid", ["root"]),
+      c("root", []),
+    ];
+    const { nodes } = buildGraph(
+      commits,
+      [{ name: "main", sha: "head" }],
+      { tags: [{ name: "v1.0", sha: "mid" }] },
+    );
+    const mid = nodes.find((n) => n.id === "mid");
+    expect(mid).toBeDefined();
+    expect(mid?.tags).toEqual(["v1.0"]);
+  });
+
+  it("computes ahead/behind for a branch tip vs the default branch", () => {
+    // main: m1 <- base ; feature: f1 <- base  (feature 1 ahead, 1 behind)
+    const commits = [
+      c("m1", ["base"]),
+      c("f1", ["base"]),
+      c("base", []),
+    ];
+    const branches: RawBranch[] = [
+      { name: "main", sha: "m1" },
+      { name: "feature", sha: "f1" },
+    ];
+    const { nodes } = buildGraph(commits, branches, { defaultBranch: "main" });
+    const feat = nodes.find((n) => n.id === "f1");
+    expect(feat?.ahead).toBe(1); // f1 not on main
+    expect(feat?.behind).toBe(1); // m1 not on feature
+    const main = nodes.find((n) => n.id === "m1");
+    expect(main?.ahead).toBeNull(); // default branch tip: no ahead/behind
+  });
 });

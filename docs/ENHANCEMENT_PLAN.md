@@ -22,11 +22,11 @@ P0 = current sprint.
    Keep `RawBranch`/`RawCommit` shape so `buildGraph`/`layout` are untouched.
    Fall back / preserve `truncated` semantics + rate-limit handling.
 
-## P1 — features
-4. Tags/releases badged on nodes.
-5. Hover preview tooltip (full message + stats) — `MapNodeView`.
-6. Branch ahead/behind vs default branch on tips.
-7. Expand/collapse collapsed "N commits" run nodes.
+## P1 — features (done)
+4. ✅ Tags/releases badged on nodes (tagged commits stay discrete).
+5. ✅ Hover preview card (summary, author, date, branches, tags) — `MapNodeView`.
+6. ✅ Branch ahead/behind vs default branch on tips.
+7. ✅ Drill into a run — already handled by InspectPanel's commit list.
 
 ## P2 — bigger bets
 8. Private-repo opt-in (second OAuth scope tier).

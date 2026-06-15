@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { GitBranch, GitMerge, Layers } from "lucide-react";
+import { GitBranch, GitMerge, Layers, Tag } from "lucide-react";
 import type { MapNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { NodeAiSummaryBadge } from "./NodeAiSummaryBadge";
@@ -62,7 +62,7 @@ export function MapNodeView({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "map-node-3d w-[220px] h-[88px] px-3 py-2 flex flex-col justify-start gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-hidden relative",
+        "group map-node-3d w-[220px] h-[88px] px-3 py-2 flex flex-col justify-start gap-0.5 bg-background text-foreground transition-colors cursor-pointer overflow-visible relative",
         "hover:brand-edge-invert hover:bg-[var(--hover-bg)] hover:text-[var(--hover-fg)]",
         selected && "brand-edge-invert is-selected bg-[var(--hover-bg)] text-[var(--hover-fg)]",
       )}
@@ -101,6 +101,48 @@ export function MapNodeView({ data, selected }: NodeProps) {
             {b}
           </span>
         ))}
+        {node.tags.map((t) => (
+          <span
+            key={t}
+            className="font-mono text-[9px] px-1 shrink-0 inline-flex items-center gap-0.5 text-[#ffb020] shadow-[0_0_0_1px_#ffb020]"
+            title={`tag: ${t}`}
+          >
+            <Tag size={8} />
+            {t}
+          </span>
+        ))}
+        {(node.ahead != null || node.behind != null) &&
+          (node.ahead || node.behind) ? (
+          <span
+            className="font-mono text-[9px] shrink-0 ml-auto text-[var(--muted)]"
+            title={`${node.ahead ?? 0} ahead / ${node.behind ?? 0} behind default branch`}
+          >
+            ↑{node.ahead ?? 0} ↓{node.behind ?? 0}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Hover detail card (escapes the node; pointer-events off so it never blocks clicks). */}
+      <div className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 z-50 hidden group-hover:block w-[240px] brand-edge bg-black px-3 py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,0.8)]">
+        <div className="text-[12px] leading-snug text-white whitespace-normal break-words">
+          {node.summary || "(no message)"}
+        </div>
+        <div className="mt-1.5 font-mono text-[9px] text-[var(--muted)] flex flex-wrap gap-x-2 gap-y-0.5">
+          <span>{node.author ?? node.authorLogin ?? "unknown"}</span>
+          {node.date && <span>{node.date.slice(0, 10)}</span>}
+          {node.kind === "run" && <span>{node.shas.length} commits</span>}
+          {node.kind !== "run" && <span className="text-[#5aa]">{node.kind}</span>}
+        </div>
+        {(node.branches.length > 0 || node.tags.length > 0) && (
+          <div className="mt-1 font-mono text-[9px] flex flex-wrap gap-1">
+            {node.branches.map((b) => (
+              <span key={b} className="text-white">⎇ {b}</span>
+            ))}
+            {node.tags.map((t) => (
+              <span key={t} className="text-[#ffb020]">⌗ {t}</span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Row 2: commit summary */}

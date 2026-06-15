@@ -30,6 +30,11 @@ export const MapNodeSchema = z.object({
   date: z.string().nullable(),
   /** Branch names whose tip is this commit. */
   branches: z.array(z.string()),
+  /** Tag/release names pointing at this commit (or, for runs, any member commit). */
+  tags: z.array(z.string()).default([]),
+  /** For branch-tip nodes: commits ahead of / behind the default branch. */
+  ahead: z.number().nullable().default(null),
+  behind: z.number().nullable().default(null),
   position: z.object({ x: z.number(), y: z.number() }),
 });
 export type MapNode = z.infer<typeof MapNodeSchema>;
