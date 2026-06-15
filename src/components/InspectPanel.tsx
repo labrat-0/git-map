@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import type { CommitDiff, MapNode } from "@/lib/types";
-import { summarizeDiffStream } from "@/lib/llm";
+import { summarizeDiffStream, summarizeRun } from "@/lib/llm";
 import { getModel, getProviderId, isConfigured } from "@/lib/byok";
 import { cn } from "@/lib/utils";
 import { Skeleton, SkeletonLines } from "./Skeleton";
@@ -28,12 +28,15 @@ export function InspectPanel({
   const [summary, setSummary] = useState<string[] | null>(null);
   const [summarizing, setSummarizing] = useState(false);
   const [streamText, setStreamText] = useState<string>("");
+  const [runSummary, setRunSummary] = useState<string[] | null>(null);
+  const [runSummarizing, setRunSummarizing] = useState(false);
 
   // Reset the manual pick when the selected node changes (render-time reset).
   const [prevNodeId, setPrevNodeId] = useState<string | undefined>(undefined);
   if (node?.id !== prevNodeId) {
     setPrevNodeId(node?.id);
     setPicked(null);
+    setRunSummary(null);
   }
 
   // Which sha to show: single-commit nodes auto-select; runs wait for a pick.
@@ -94,6 +97,40 @@ export function InspectPanel({
     }
   }, [diff]);
 
+  // Summarize an entire run node (all member commits) into one set of bullets.
+  const RUN_SUMMARY_CAP = 12;
+  const onSummarizeRun = useCallback(async () => {
+    if (!node || node.shas.length < 2 || !owner || !repo) return;
+    if (!isConfigured()) {
+      toast.error("Open Settings to pick an AI provider + model first.");
+      return;
+    }
+    const cacheKey = `gitmap.runsummary.${node.id}.${getProviderId()}.${getModel(getProviderId())}`;
+    const cached = window.localStorage.getItem(cacheKey);
+    if (cached) {
+      setRunSummary(JSON.parse(cached) as string[]);
+      return;
+    }
+    setRunSummarizing(true);
+    try {
+      const shas = node.shas.slice(0, RUN_SUMMARY_CAP);
+      const diffs = await Promise.all(
+        shas.map((s) =>
+          fetch(`/api/diff/${owner}/${repo}/${s}`).then((r) =>
+            r.ok ? (r.json() as Promise<CommitDiff>) : Promise.reject(r.statusText),
+          ),
+        ),
+      );
+      const bullets = await summarizeRun(diffs);
+      setRunSummary(bullets);
+      window.localStorage.setItem(cacheKey, JSON.stringify(bullets));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Run summary failed");
+    } finally {
+      setRunSummarizing(false);
+    }
+  }, [node, owner, repo]);
+
   return (
     <aside className={cn("w-[420px] shrink-0 h-full flex flex-col border-l border-white bg-background", className)}>
       {/* Header — always present. */}
@@ -135,24 +172,58 @@ export function InspectPanel({
         </div>
       )}
 
-      {/* Run node: list its commits to pick from. */}
+      {/* Run node: summarize the whole run, then list its commits to pick from. */}
       {node && node.shas.length > 1 && (
-        <div className="border-b border-white shrink-0 max-h-36 overflow-y-auto">
-          <div className="px-4 py-1.5 col-eyebrow">
-            {node.shas.length} commits in run
-          </div>
-          {node.shas.map((s) => (
+        <div className="border-b border-white shrink-0">
+          <div className="px-4 py-1.5 flex items-center justify-between gap-2">
+            <span className="col-eyebrow">{node.shas.length} commits in run</span>
             <button
-              key={s}
-              onClick={() => setPicked(s)}
+              onClick={onSummarizeRun}
+              disabled={runSummarizing || !isConfigured()}
+              title={
+                isConfigured()
+                  ? `Summarize the whole run (up to ${RUN_SUMMARY_CAP} commits) with AI`
+                  : "Pick an AI provider + model in Settings"
+              }
               className={cn(
-                "w-full text-left px-4 py-1 font-mono text-[11px] hover:bg-white hover:text-black transition-colors",
-                s === activeSha && "bg-white text-black",
+                "brand-edge px-2 py-0.5 text-[10px] font-mono inline-flex items-center gap-1",
+                "hover:brand-edge-invert hover:bg-white hover:text-black transition-colors",
+                "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-background disabled:hover:text-foreground",
               )}
             >
-              {s.slice(0, 9)}
+              <Sparkles size={11} />
+              {runSummarizing ? "summarizing…" : "summarize run"}
             </button>
-          ))}
+          </div>
+
+          {runSummary && (
+            <div className="mx-4 mb-2 px-3 py-2 brand-edge gm-rise">
+              <div className="col-eyebrow mb-1.5">run summary · your key</div>
+              <ul className="space-y-1.5">
+                {runSummary.map((b, i) => (
+                  <li key={i} className="text-[12px] leading-snug flex gap-2">
+                    <span className="text-[var(--muted)]">—</span>
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="max-h-36 overflow-y-auto">
+            {node.shas.map((s) => (
+              <button
+                key={s}
+                onClick={() => setPicked(s)}
+                className={cn(
+                  "w-full text-left px-4 py-1 font-mono text-[11px] hover:bg-white hover:text-black transition-colors",
+                  s === activeSha && "bg-white text-black",
+                )}
+              >
+                {s.slice(0, 9)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
