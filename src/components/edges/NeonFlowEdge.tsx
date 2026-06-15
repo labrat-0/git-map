@@ -2,6 +2,12 @@
 
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
 
+interface NeonEdgeData {
+  onSpine?: boolean;
+  onPath?: boolean;
+  dim?: boolean;
+}
+
 export function NeonFlowEdge({
   id,
   sourceX,
@@ -10,6 +16,7 @@ export function NeonFlowEdge({
   targetX,
   targetY,
   targetPosition,
+  data,
 }: EdgeProps) {
   const [edgePath] = getSmoothStepPath({
     sourceX,
@@ -19,6 +26,29 @@ export function NeonFlowEdge({
     targetY,
     targetPosition,
   });
+
+  const { onSpine, onPath, dim } = (data ?? {}) as NeonEdgeData;
+
+  // Visual weight: highlighted selection path > default-branch spine > side branch.
+  // A dimmed edge (selection active, not on path) fades into the background.
+  let glowWidth = 1.5;
+  let glowOpacity = 0.55;
+  let baseOpacity = 0.3;
+  let dashDuration = "1.8s";
+  if (dim) {
+    glowOpacity = 0.1;
+    baseOpacity = 0.06;
+  } else if (onPath) {
+    glowWidth = 2.6;
+    glowOpacity = 1;
+    baseOpacity = 0.5;
+    dashDuration = "1.1s";
+  } else if (onSpine) {
+    glowWidth = 2.1;
+    glowOpacity = 0.9;
+    baseOpacity = 0.4;
+    dashDuration = "1.4s";
+  }
 
   return (
     <>
@@ -34,17 +64,20 @@ export function NeonFlowEdge({
       <BaseEdge
         id={id}
         path={edgePath}
-        style={{ stroke: "#ffffff", strokeWidth: 1, opacity: 0.35 }}
+        style={{ stroke: "#ffffff", strokeWidth: 1, opacity: baseOpacity }}
       />
       <path
         d={edgePath}
         fill="none"
         stroke="#00ff41"
-        strokeWidth={1.5}
+        strokeWidth={glowWidth}
         strokeDasharray="6 10"
         strokeLinecap="butt"
         filter={`url(#glow-${id})`}
-        style={{ animation: "neon-dash 1.8s linear infinite", opacity: 0.7 }}
+        style={{
+          animation: `neon-dash ${dashDuration} linear infinite`,
+          opacity: glowOpacity,
+        }}
       />
     </>
   );
