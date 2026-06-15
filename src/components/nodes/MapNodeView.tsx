@@ -7,7 +7,13 @@ import { cn } from "@/lib/utils";
 import { NodeAiSummaryBadge } from "./NodeAiSummaryBadge";
 
 /** React Flow node data is the MapNode minus the fields RF owns. */
-export type MapNodeData = Omit<MapNode, "position"> & { jumpLabel?: string };
+export type MapNodeData = Omit<MapNode, "position"> & {
+  jumpLabel?: string;
+  /** Selection active and this node is not on the highlighted ancestor path. */
+  dim?: boolean;
+  /** Node lies on the default-branch ancestry (the spine). */
+  onSpine?: boolean;
+};
 
 const icon = {
   commit: null,
@@ -63,8 +69,12 @@ export function MapNodeView({ data, selected }: NodeProps) {
       style={{
         filter: selected
           ? "drop-shadow(0 0 6px #00ff41) drop-shadow(0 0 12px rgba(0,255,65,0.5))"
-          : "drop-shadow(0 0 3px rgba(0,255,65,0.2))",
-        transition: "filter 0.15s ease, background 0.2s, color 0.2s",
+          : node.onSpine
+            ? "drop-shadow(0 0 4px rgba(0,255,65,0.45))"
+            : "drop-shadow(0 0 3px rgba(0,255,65,0.2))",
+        opacity: node.dim ? 0.28 : 1,
+        transition:
+          "filter 0.15s ease, opacity 0.2s ease, background 0.2s, color 0.2s",
       }}
     >
       {node.jumpLabel && (
