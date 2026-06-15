@@ -38,7 +38,10 @@ P0 = current sprint.
 11. ⏸️ Persistent/shared cache — DEFERRED (2026-06-15). In-memory LRU is adequate
     (survives between requests; only lost on redeploy; graphs have 60s TTL).
 
-## P3 — polish/infra
-12. Error boundaries + richer empty/error states.
-13. CI GitHub Action (lint + test + build).
-14. a11y / contrast pass on the neon theme.
+## P3 — polish/infra (done)
+12. ✅ Error boundaries — `app/error.tsx` + `app/global-error.tsx`.
+13. ✅ CI GitHub Action — `.github/workflows/ci.yml` (lint + test + build).
+    Required fixing the long-standing `NodeAiSummaryBadge` set-state-in-effect
+    lint error (cache now derived in render).
+14. ✅ a11y pass — keyboard `:focus-visible` neon ring; bumped `--muted`
+    contrast to clear WCAG AA on black.
