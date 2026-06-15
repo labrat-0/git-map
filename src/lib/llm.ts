@@ -13,6 +13,31 @@ const SKIP_FILE =
 const SYSTEM_PROMPT =
   "You summarize git commit diffs. Reply with EXACTLY three concise bullet points in plain English describing what changed and why it matters. No preamble, no markdown headers. Start each line with '- '.";
 
+/** Cap the combined run payload — messages + file lists, not full patches. */
+const MAX_RUN_CHARS = 8_000;
+const RUN_SYSTEM_PROMPT =
+  "You summarize a sequence of related git commits (a run of work) as a whole. Reply with EXACTLY three concise bullet points in plain English describing the overall theme and what changed across the run — not commit-by-commit. No preamble, no markdown headers. Start each line with '- '.";
+
+function firstLine(msg: string): string {
+  return (msg.split("\n")[0] ?? "").trim();
+}
+
+function buildRunText(diffs: CommitDiff[]): string {
+  let out = `A run of ${diffs.length} related commits (newest first):\n\n`;
+  for (const d of diffs) {
+    out += `- ${firstLine(d.message)} (+${d.additions}/-${d.deletions}, ${d.files.length} files)\n`;
+    const names = d.files.slice(0, 6).map((f) => f.filename).join(", ");
+    if (names) {
+      out += `    files: ${names}${d.files.length > 6 ? ", …" : ""}\n`;
+    }
+    if (out.length > MAX_RUN_CHARS) {
+      out = out.slice(0, MAX_RUN_CHARS) + "\n…[truncated]";
+      break;
+    }
+  }
+  return out;
+}
+
 function buildDiffText(diff: CommitDiff): string {
   let out = `Commit: ${diff.message.split("\n")[0]}\n`;
   out += `(+${diff.additions} / -${diff.deletions} across ${diff.files.length} files)\n\n`;
@@ -86,4 +111,25 @@ export async function summarizeDiffStream(
     },
   );
   return parseBullets(fullText);
+}
+
+/**
+ * Summarize a whole run of commits into 3 bullets describing the overall
+ * change. Uses commit messages + file lists (not full patches) to stay cheap.
+ */
+export async function summarizeRun(diffs: CommitDiff[]): Promise<string[]> {
+  if (!isConfigured()) {
+    throw new Error("AI not configured. Open Settings to pick a provider/model.");
+  }
+  const id = getProviderId();
+  const def = getProviderDef(id);
+  const text = await complete(
+    def,
+    getKey(id),
+    getBaseUrl(id),
+    getModel(id),
+    RUN_SYSTEM_PROMPT,
+    buildRunText(diffs),
+  );
+  return parseBullets(text);
 }
