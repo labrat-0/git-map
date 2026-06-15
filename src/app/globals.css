@@ -10,9 +10,20 @@
   --background: #000000;
   --foreground: #ffffff;
   --line: #ffffff;
-  --muted: #8a8a8a;
+  /* Bumped from #8a8a8a to clear WCAG AA (4.5:1) on black for small text. */
+  --muted: #9a9a9a;
   --hover-bg: #ffffff;
   --hover-fg: #000000;
+}
+
+/* Keyboard-visible focus ring (neon, never shown on mouse focus). */
+:focus-visible {
+  outline: 2px solid #00ff41;
+  outline-offset: 2px;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid #00ff41;
+  outline-offset: 2px;
 }
 
 @theme inline {
