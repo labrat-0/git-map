@@ -14,11 +14,21 @@ export interface RawBranch {
   sha: string;
 }
 
+export interface RawTag {
+  name: string;
+  sha: string;
+}
+
+export interface BuildOptions {
+  tags?: RawTag[];
+  defaultBranch?: string;
+}
+
 /**
  * Build a node/edge graph from a set of commits, collapsing maximal linear
  * runs (commits with exactly one parent and one child, in-set) into a single
  * "run" node. Merges (2+ parents), branch points (2+ children), branch tips,
- * roots, and the head stay as discrete nodes.
+ * tagged commits, roots, and the head stay as discrete nodes.
  *
  * Edge direction: child (newer) -> parent (older), so a top-down dagre layout
  * puts newer commits above older ones.
@@ -26,7 +36,9 @@ export interface RawBranch {
 export function buildGraph(
   commits: RawCommit[],
   branches: RawBranch[],
+  opts: BuildOptions = {},
 ): { nodes: MapNode[]; edges: MapEdge[] } {
+  const { tags = [], defaultBranch } = opts;
   const inSet = new Set(commits.map((c) => c.sha));
   const bySha = new Map(commits.map((c) => [c.sha, c]));
 
@@ -34,9 +46,11 @@ export function buildGraph(
   const rawEdges: Array<[string, string]> = [];
   const childrenCount = new Map<string, number>();
   const parentCount = new Map<string, number>();
+  const parentsOf = new Map<string, string[]>();
   for (const c of commits) {
     const parentsInSet = c.parents.filter((p) => inSet.has(p));
     parentCount.set(c.sha, parentsInSet.length);
+    if (parentsInSet.length) parentsOf.set(c.sha, parentsInSet);
     for (const p of parentsInSet) {
       rawEdges.push([c.sha, p]);
       childrenCount.set(p, (childrenCount.get(p) ?? 0) + 1);
@@ -51,12 +65,54 @@ export function buildGraph(
     branchesBySha.set(b.sha, arr);
   }
 
+  const tagsBySha = new Map<string, string[]>();
+  for (const t of tags) {
+    if (!inSet.has(t.sha)) continue;
+    const arr = tagsBySha.get(t.sha) ?? [];
+    arr.push(t.name);
+    tagsBySha.set(t.sha, arr);
+  }
+
+  // All in-set ancestors of `start` (inclusive), walking child -> parent.
+  const ancestorsOf = (start: string): Set<string> => {
+    const seen = new Set<string>([start]);
+    const queue = [start];
+    while (queue.length) {
+      const id = queue.shift()!;
+      for (const p of parentsOf.get(id) ?? []) {
+        if (!seen.has(p)) {
+          seen.add(p);
+          queue.push(p);
+        }
+      }
+    }
+    return seen;
+  };
+
+  // Ahead/behind vs the default branch, per branch-tip sha.
+  const aheadBehind = new Map<string, { ahead: number; behind: number }>();
+  const defaultSha = branches.find((b) => b.name === defaultBranch)?.sha;
+  if (defaultSha && inSet.has(defaultSha)) {
+    const defAnc = ancestorsOf(defaultSha);
+    for (const b of branches) {
+      if (b.sha === defaultSha || !inSet.has(b.sha)) continue;
+      if (aheadBehind.has(b.sha)) continue;
+      const tipAnc = ancestorsOf(b.sha);
+      let ahead = 0;
+      for (const s of tipAnc) if (!defAnc.has(s)) ahead++;
+      let behind = 0;
+      for (const s of defAnc) if (!tipAnc.has(s)) behind++;
+      aheadBehind.set(b.sha, { ahead, behind });
+    }
+  }
+
   // A commit is linear (collapsible) iff exactly one in-set parent, exactly one
-  // in-set child, and it is not a branch tip.
+  // in-set child, and it is neither a branch tip nor a tagged commit.
   const isLinear = (sha: string): boolean =>
     (parentCount.get(sha) ?? 0) === 1 &&
     (childrenCount.get(sha) ?? 0) === 1 &&
-    !branchesBySha.has(sha);
+    !branchesBySha.has(sha) &&
+    !tagsBySha.has(sha);
 
   // Group linear commits into runs via the induced linear subgraph (simple chains).
   const runIdOf = new Map<string, string>();
@@ -109,6 +165,7 @@ export function buildGraph(
         : branches.length > 0
           ? "branch"
           : "commit";
+    const ab = aheadBehind.get(c.sha);
     nodes.push({
       id: c.sha,
       kind,
@@ -119,6 +176,9 @@ export function buildGraph(
       authorLogin: c.authorLogin,
       date: c.date,
       branches,
+      tags: tagsBySha.get(c.sha) ?? [],
+      ahead: ab?.ahead ?? null,
+      behind: ab?.behind ?? null,
       position: { x: 0, y: 0 },
     });
   }
@@ -128,6 +188,8 @@ export function buildGraph(
     // newest first by date (fallback: keep insertion order)
     const sorted = [...members].sort((s1, s2) => dateDesc(bySha, s1, s2));
     const newest = bySha.get(sorted[0]);
+    // Surface any tags landing on a collapsed member commit.
+    const runTags = sorted.flatMap((s) => tagsBySha.get(s) ?? []);
     nodes.push({
       id,
       kind: "run",
@@ -138,6 +200,9 @@ export function buildGraph(
       authorLogin: newest?.authorLogin ?? null,
       date: newest?.date ?? null,
       branches: [],
+      tags: runTags,
+      ahead: null,
+      behind: null,
       position: { x: 0, y: 0 },
     });
   }

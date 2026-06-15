@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getGraphQL, getOctokit } from "@/lib/github";
-import { buildGraph, type RawBranch, type RawCommit } from "@/lib/graph";
+import {
+  buildGraph,
+  type RawBranch,
+  type RawCommit,
+  type RawTag,
+} from "@/lib/graph";
 import { layoutGraph } from "@/lib/layout";
 import { graphCache } from "@/lib/cache";
 import { GraphSchema, type Graph } from "@/lib/types";
@@ -11,9 +16,12 @@ const MAX_BRANCHES = 25;
 const MAX_COMMITS = 500;
 const PER_PAGE = 100;
 
+const MAX_TAGS = 50;
+
 interface RawFetch {
   defaultBranch: string;
   branches: RawBranch[];
+  tags: RawTag[];
   commits: RawCommit[];
   truncated: boolean;
 }
@@ -43,13 +51,29 @@ interface GqlResponse {
         };
       }>;
     };
+    tags: {
+      nodes: Array<{
+        name: string;
+        // Lightweight tag -> Commit (oid). Annotated tag -> Tag { target { oid } }.
+        target: { oid: string; target?: { oid: string } };
+      }>;
+    };
   } | null;
 }
 
 const GRAPH_QUERY = `
-  query ($owner: String!, $repo: String!, $branches: Int!, $commits: Int!) {
+  query ($owner: String!, $repo: String!, $branches: Int!, $commits: Int!, $tags: Int!) {
     repository(owner: $owner, name: $repo) {
       defaultBranchRef { name }
+      tags: refs(refPrefix: "refs/tags/", first: $tags, orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+        nodes {
+          name
+          target {
+            oid
+            ... on Tag { target { oid } }
+          }
+        }
+      }
       refs(
         refPrefix: "refs/heads/"
         first: $branches
@@ -89,6 +113,7 @@ async function fetchViaGraphQL(
     repo,
     branches: MAX_BRANCHES,
     commits: PER_PAGE,
+    tags: MAX_TAGS,
   });
   const repository = res.repository;
   if (!repository) {
@@ -124,9 +149,16 @@ async function fetchViaGraphQL(
     }
   }
 
+  const tags: RawTag[] = repository.tags.nodes.map((t) => ({
+    name: t.name,
+    // Annotated tags resolve through target.target; lightweight use target.oid.
+    sha: t.target.target?.oid ?? t.target.oid,
+  }));
+
   return {
     defaultBranch: repository.defaultBranchRef?.name ?? "main",
     branches,
+    tags,
     commits: Array.from(commitMap.values()),
     truncated,
   };
@@ -151,6 +183,19 @@ async function fetchViaRest(
     name: b.name,
     sha: b.commit.sha,
   }));
+
+  // Tags (best-effort; failure here shouldn't sink the whole graph).
+  let tags: RawTag[] = [];
+  try {
+    const { data: tagData } = await octokit.rest.repos.listTags({
+      owner,
+      repo,
+      per_page: MAX_TAGS,
+    });
+    tags = tagData.map((t) => ({ name: t.name, sha: t.commit.sha }));
+  } catch {
+    tags = [];
+  }
 
   const commitMap = new Map<string, RawCommit>();
   let truncated = false;
@@ -202,6 +247,7 @@ async function fetchViaRest(
   return {
     defaultBranch,
     branches,
+    tags,
     commits: Array.from(commitMap.values()),
     truncated,
   };
@@ -234,7 +280,10 @@ export async function GET(
       raw = await fetchViaRest(octokit, owner, repo);
     }
 
-    const { nodes, edges } = buildGraph(raw.commits, raw.branches);
+    const { nodes, edges } = buildGraph(raw.commits, raw.branches, {
+      tags: raw.tags,
+      defaultBranch: raw.defaultBranch,
+    });
     const laidOut = layoutGraph(nodes, edges);
 
     const graph: Graph = GraphSchema.parse({

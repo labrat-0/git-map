@@ -13,6 +13,9 @@ function node(id: string): MapNode {
     authorLogin: null,
     date: null,
     branches: [],
+    tags: [],
+    ahead: null,
+    behind: null,
     position: { x: 0, y: 0 },
   };
 }
