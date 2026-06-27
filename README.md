@@ -1,11 +1,22 @@
 # git-map
 
+**See any GitHub repo as a map, not a wall of text.**
+
 > Interactive 2D map of any GitHub repo's branch/commit topology — sign in with
 > GitHub, pick a repo, explore the structure visually, and get optional AI
 > summaries of individual commits.
 
 Runs entirely on your own machine. A single Next.js app — UI + API routes +
-GitHub OAuth in one process. No external backend, no payment, no telemetry.
+GitHub OAuth in one process. No external backend, no payment, no telemetry,
+no account beyond your own GitHub.
+
+## Why git-map
+
+- 🗺️ **Visual git history** — branches and commits as a zoomable 2D graph, not `git log`.
+- 🔭 **Stays readable on big repos** — linear commit runs collapse into expandable nodes.
+- 🤖 **Optional AI commit summaries** — 3-bullet plain-English explanation per commit, bring your own key.
+- 🔒 **Private by design** — your GitHub token stays server-side; your AI key stays in your browser.
+- 💻 **100% local** — clone, add creds, `npm run dev`. Nothing phones home.
 
 ## What it is
 
@@ -88,6 +99,18 @@ npm test
 
 > Running on a different port? Update both `OAUTH_CALLBACK_URL` and the OAuth
 > App's callback URL to match — GitHub requires them to be identical.
+
+## Troubleshooting sign-in
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| **404 on the GitHub authorize page** after clicking *Connect to GitHub* | `GITHUB_CLIENT_ID` is wrong, or the OAuth App was deleted | Confirm the app exists at GitHub → Developer settings → OAuth Apps; copy its **Client ID** into `.env.local` |
+| **Bounced back to the login screen** (URL shows `?error=oauth_token`) | `GITHUB_CLIENT_SECRET` is wrong — GitHub returns `incorrect_client_credentials` | **Generate a new client secret**, copy it whole (no quotes/spaces/newline) into `.env.local` |
+| **`?error=oauth_state`** | Stale/lost session during the round-trip | Make sure `SESSION_SECRET` is set (≥32 chars) and retry |
+| Changed any env value | Next.js loads env at boot | Restart the dev server |
+
+> The OAuth App's **Authorization callback URL** must exactly equal
+> `OAUTH_CALLBACK_URL` (default `http://localhost:4200/api/auth/callback`).
 
 ## AI summaries (optional, bring your own key)
 
