@@ -48,8 +48,8 @@ GitHub → **Settings → Developer settings → OAuth Apps → New OAuth App**:
 | Field | Value |
 |-------|-------|
 | Application name | anything (e.g. `git-map local`) |
-| Homepage URL | `http://localhost:3000` |
-| Authorization callback URL | `http://localhost:3000/api/auth/callback` |
+| Homepage URL | `http://localhost:4200` |
+| Authorization callback URL | `http://localhost:4200/api/auth/callback` |
 
 Register it, then **Generate a new client secret**. Keep the **Client ID** and
 **Client secret** handy.
@@ -69,13 +69,13 @@ Fill `.env.local`:
 GITHUB_CLIENT_ID=<your client id>
 GITHUB_CLIENT_SECRET=<your client secret>
 SESSION_SECRET=<run: openssl rand -hex 32>
-OAUTH_CALLBACK_URL=http://localhost:3000/api/auth/callback
+OAUTH_CALLBACK_URL=http://localhost:4200/api/auth/callback
 ```
 
 ### 3. Run
 
 ```bash
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:4200
 ```
 
 Open it, click **Sign in with GitHub**, pick a repo.
