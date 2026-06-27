@@ -1,6 +1,17 @@
+<div align="center">
+
+<img src="public/icons/icon_256x256.png" alt="git-map logo" width="120" height="120" />
+
 # git-map
 
 **See any GitHub repo as a map, not a wall of text.**
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-149eca?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+</div>
 
 > Interactive 2D map of any GitHub repo's branch/commit topology — sign in with
 > GitHub, pick a repo, explore the structure visually, and get optional AI
