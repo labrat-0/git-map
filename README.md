@@ -1,164 +1,119 @@
 # git-map
 
-> Interactive 2D map of any GitHub repo's branch/commit topology — connect GitHub, pick a
-> repo, explore the structure visually, and get optional AI summaries of individual commits.
+> Interactive 2D map of any GitHub repo's branch/commit topology — sign in with
+> GitHub, pick a repo, explore the structure visually, and get optional AI
+> summaries of individual commits.
 
-**Status:** scaffolding / pre-build. This README is the source of truth for scope and intent.
-It is written for two readers: the human owner and any AI agent picking up the work.
+Runs entirely on your own machine. A single Next.js app — UI + API routes +
+GitHub OAuth in one process. No external backend, no payment, no telemetry.
 
----
+## What it is
 
-## What this is
+Sign in with GitHub → your **public** repos list in the sidebar → pick one →
+a top-down, zoomable 2D map of its branches and commits (linear runs collapse
+into expandable nodes so big repos stay readable). Click a node for the raw
+commit diff and an **optional**, BYOK AI-generated 3-bullet summary.
 
-A web-only, multi-tenant dashboard. A visitor signs in with GitHub, sees their **public**
-repositories in a left sidebar, selects one, and is shown a top-down, zoomable 2D map (a ZUI)
-of that repo's branches and commits. Clicking a node opens a side drawer with the raw commit
-diff and an **optional** AI-generated 3-bullet plain-English summary of what changed.
-
-It is intended to live as a private project during local testing, then be exposed as a subpage
-of **ratlabs.tech** (via CNAME / subdomain) once stable.
-
-## Why it exists / intent
-
-- A fast, distinctive way to grok a repo's history at a glance — branches, merges, and the
-  shape of work — without reading `git log` walls of text.
-- Zero operator cost and zero liability: the operator never holds an LLM key and never proxies
-  any AI traffic. AI is strictly opt-in and Bring-Your-Own-Key.
-- Aligns with the ratlabs.tech house aesthetic: high-contrast monochrome, sharp, terminal-grade.
-
-## Confirmed decisions (v1)
-
-| Area | Decision |
-|------|----------|
-| Auth | GitHub **OAuth App** ("Sign in with GitHub") |
-| AI | **BYOK only** (Bring Your Own Key). Optional feature. Operator holds no key, proxies no LLM traffic, carries no token cost or data-handling liability. |
-| Repo scope | **Public repos only**. No private-repo data egress in v1. |
-| Map model | **Collapse linear commit runs** into one expandable node; branches/merges stay distinct. Keeps large repos readable. |
-| Input | Mouse/trackpad primary. Keyboard spatial nav is a later power-user enhancement. |
-| Privacy of this repo | **Private** during dev; will be made reachable as a ratlabs.tech subpage later. |
-
-## How it works (architecture)
+## How it works
 
 ```
 Browser (Next.js / React Flow)
-   |  httpOnly session cookie (GitHub token NEVER exposed to client JS)
+   |  httpOnly session cookie (GitHub token never exposed to client JS)
    v
-Next.js API routes (server, single Next app deployed on Fly.io)
-   |- /api/auth/login                 -> redirect to GitHub OAuth (CSRF `state`)
-   |- /api/auth/callback              -> exchange code->token (client_secret server-side), set session
-   |- /api/repos                      -> list the user's PUBLIC repos (Octokit)
-   |- /api/graph/[owner]/[repo]       -> GraphQL history -> collapse linear runs -> node/edge JSON -> dagre layout
-   |- /api/diff/[owner]/[repo]/[sha]  -> REST commit diff (lazy, on node click)
+Next.js API routes (same app)
+   |- /api/auth/login                 -> redirect to GitHub OAuth (CSRF state)
+   |- /api/auth/callback              -> exchange code->token, set session
+   |- /api/repos                      -> list your PUBLIC repos (Octokit)
+   |- /api/graph/[owner]/[repo]       -> GraphQL history -> collapse -> dagre layout
+   |- /api/diff/[owner]/[repo]/[sha]  -> commit diff (lazy, on node click)
    v
 GitHub API
 ```
 
-**AI summary path deliberately bypasses the server.** The "Summarize" action calls the user's
-chosen endpoint (OpenRouter or compatible) **directly from the browser** with the user's own
-key. The key lives only in browser `localStorage` (explicit local-only disclosure on entry).
-The operator server never sees the key or the request/response. This is the core liability
-guarantee — keep it intact.
+**AI summaries bypass the server entirely.** "Summarize" calls your chosen
+provider (OpenRouter or any compatible endpoint) **directly from the browser**
+with your own key. The key lives only in browser `localStorage` — it never
+touches the server, is never logged. Public repos only; no private code passes
+through.
 
-### Deployment — Fly.io (single Next app)
+## Run it locally
 
-The existing site `labrat-0.github.io` is a **static GitHub Pages** site and **cannot** host
-OAuth token exchange (needs `client_secret`) or API routes. `git-map` is therefore deployed to
-**Fly.io** as a **single Next.js app** (UI + API routes + OAuth in one container), reached at
-`gitmap.ratlabs.tech` via a CNAME to the Fly app + `fly certs`.
+Needs Node 22+ and a (free) GitHub OAuth App you create — that's what lets the
+app sign you in.
 
-Mirrors the `nota/server` Fly conventions: `Dockerfile` build, `primary_region = "iad"`,
-`[http_service]` on `internal_port` 3000, `force_https = true`, `auto_start_machines`,
-`min_machines_running = 1`, `[[http_service.checks]]` health check (`/api/health`). No volume
-mount in v1 (no DB yet).
+### 1. Create a GitHub OAuth App
 
-- **Dockerfile:** Next.js standalone output (`output: "standalone"`), `node:22-alpine`,
-  multi-stage (deps -> build -> runner), `CMD ["node", "server.js"]`, `EXPOSE 3000`.
-- **fly.toml:** app `git-map`, shape mirrors `nota/server`.
-- **Secrets** via `fly secrets set` (never committed): `GITHUB_CLIENT_ID`,
-  `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, `OAUTH_CALLBACK_URL`.
+GitHub → **Settings → Developer settings → OAuth Apps → New OAuth App**:
 
-**Owner setup (one-time):** `fly auth login`; `fly apps create git-map`; register the GitHub
-OAuth App with prod callback `https://gitmap.ratlabs.tech/api/auth/callback` (and a localhost
-callback for dev); `fly secrets set …`; add DNS CNAME `gitmap` -> `git-map.fly.dev` then
-`fly certs add gitmap.ratlabs.tech`.
+| Field | Value |
+|-------|-------|
+| Application name | anything (e.g. `git-map local`) |
+| Homepage URL | `http://localhost:3000` |
+| Authorization callback URL | `http://localhost:3000/api/auth/callback` |
+
+Register it, then **Generate a new client secret**. Keep the **Client ID** and
+**Client secret** handy.
+
+### 2. Configure env
+
+```bash
+git clone https://github.com/labrat-0/git-map
+cd git-map
+npm install
+cp .env.example .env.local
+```
+
+Fill `.env.local`:
+
+```bash
+GITHUB_CLIENT_ID=<your client id>
+GITHUB_CLIENT_SECRET=<your client secret>
+SESSION_SECRET=<run: openssl rand -hex 32>
+OAUTH_CALLBACK_URL=http://localhost:3000/api/auth/callback
+```
+
+### 3. Run
+
+```bash
+npm run dev      # http://localhost:3000
+```
+
+Open it, click **Sign in with GitHub**, pick a repo.
+
+```bash
+npm run build && npm start   # production build
+npm run lint
+npm test
+```
+
+> Running on a different port? Update both `OAUTH_CALLBACK_URL` and the OAuth
+> App's callback URL to match — GitHub requires them to be identical.
+
+## AI summaries (optional, bring your own key)
+
+In the app's settings, paste an OpenRouter (or compatible) API key and pick a
+model. The key is stored in your browser only and used for direct browser →
+provider calls. No key, no AI — everything else works without it.
 
 ## Tech stack
 
-Mirrors the existing `ratlabs-cc` house stack for consistency:
-
 - Next.js 16 (App Router) + React 19 + TypeScript
-- Tailwind CSS v4 + shadcn/ui + base-ui/react + lucide-react + sonner
-- zod (schema validation)
+- Tailwind CSS v4 + lucide-react + sonner
 - [`@xyflow/react`](https://reactflow.dev) (React Flow) — the canvas
 - `@dagrejs/dagre` — automated tree layout
-- `@octokit/rest` + Octokit GraphQL — GitHub API access
-- No database in v1 (see Caching). Upstash Redis is the planned option if a shared cache is added.
-
-## Design language (strict ratlabs alignment)
-
-- Background: absolute black `#000000`.
-- Components & nodes: **zero** border-radius, **1px** solid white borders, high contrast.
-- Hover / active: invert to solid white background, black text.
-- Crisp 1px borders at any zoom: use `box-shadow: 0 0 0 1px #fff` (not `border`, which blurs
-  under CSS transform) and round dagre node positions to the integer pixel grid.
-- Typography: monospace for hashes / technical metadata; clean sans-serif for UI labels.
-
-## Build order (planned)
-
-1. OAuth flow + signed httpOnly session (login, callback, logout, CSRF `state`).
-2. Sidebar: list user's public repos; monochrome, sharp, invert-on-hover; click to load map.
-3. Graph builder API: GraphQL history -> collapse linear chains into expandable nodes -> dagre
-   positions -> zod-validated node/edge schema.
-4. Canvas: React Flow with `onlyRenderVisibleElements`, custom branded node, step edges,
-   expand/collapse of collapsed runs.
-5. Diff drawer: lazy fetch of `/api/diff`, raw diff in monospace, "Summarize with AI" button
-   (enabled only when a key is saved).
-6. BYOK settings: paste/clear key + pick model; `localStorage` only; local-only disclosure.
-
-## Caching (v1, minimal)
-
-- Commit diffs are immutable (SHA = content) -> cache `/api/diff` by SHA via `Cache-Control:
-  immutable` + an in-process LRU (single long-lived Fly machine). No DB needed.
-- Graph responses: short TTL per repo (history changes on push).
-- AI summaries: cached client-side in `localStorage`, keyed by `sha + model`. A shared
-  Redis SHA-cache to dedup public-repo summaries across users is a possible future addition.
+- `@octokit/rest` + Octokit GraphQL — GitHub API
+- `iron-session` — signed httpOnly session cookie
+- `zod` — schema validation
 
 ## Security notes (do not regress)
 
-- GitHub `client_secret` and access token: **server-side only**, never shipped to the browser;
-  token stored in a signed httpOnly cookie session.
-- OAuth `state` parameter to prevent CSRF on the callback.
-- OpenRouter / LLM key: **browser-only**, never sent to the operator server, never logged.
-  The LLM call goes browser -> provider directly.
-- v1 is public repos only -> no private code or diffs pass through the operator.
-- Secrets (`client_secret`, session signing secret) live in Fly secrets (`fly secrets set`),
-  never committed. `.env.local` is gitignored for local dev.
+- GitHub `client_secret` + access token: **server-side only**, never shipped to
+  the browser; token stored in a signed httpOnly cookie.
+- OAuth `state` parameter guards the callback against CSRF.
+- LLM key: **browser-only**, never sent to the server, never logged.
+- Public repos only — no private code or diffs pass through the server.
+- `.env.local` is gitignored. Never commit your client secret.
 
-## Local development (once scaffolded)
+## License
 
-```bash
-# install
-npm install            # or pnpm install
-
-# env: create .env.local with
-#   GITHUB_CLIENT_ID=...
-#   GITHUB_CLIENT_SECRET=...
-#   SESSION_SECRET=...           # random 32+ byte string
-#   OAUTH_CALLBACK_URL=http://localhost:3000/api/auth/callback
-
-npm run dev            # http://localhost:3000
-npm run build          # production build
-npm run lint           # eslint
-```
-
-Register a GitHub OAuth App (Settings -> Developer settings -> OAuth Apps) with the callback
-URL above for local testing; add a second callback URL for `https://gitmap.ratlabs.tech/api/auth/callback` when deploying to Fly.
-
-## For the agent picking this up
-
-- The full approved implementation plan is the authority on sequencing; this README is the
-  authority on scope, intent, and the non-negotiables (BYOK/liability, security notes, brand).
-- Do not introduce a server-side LLM proxy or store the user's LLM key server-side — that
-  breaks the core liability guarantee.
-- Do not add private-repo support in v1 without revisiting consent + access-gated caching.
-- Match the `ratlabs-cc` stack and the monochrome design language above.
+[MIT](./LICENSE) — use it, fork it, ship it.

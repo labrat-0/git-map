@@ -6,7 +6,7 @@ import type { NextConfig } from "next";
 //   policy would need middleware; deferred.
 // - connect-src https:: BYOK sends AI requests from the browser directly to a
 //   user-supplied provider base URL (any https host), so we cannot enumerate it.
-// - frame-ancestors 'none': the app is linked to (not embedded) from ratlabs.tech.
+// - frame-ancestors 'none': the app is meant to be linked to, not embedded.
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -32,7 +32,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Standalone build for the Fly.io Docker runner (`node server.js`).
+  // Standalone build so the app can run as `node server.js` in any container.
   output: "standalone",
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

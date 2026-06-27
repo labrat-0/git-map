@@ -25,7 +25,7 @@ export async function getSession() {
   if (!password || password.length < 32) {
     throw new Error(
       "[session] SESSION_SECRET env var is missing or shorter than 32 characters. " +
-      "Set it in .env.local (dev) or via `fly secrets set SESSION_SECRET=...` (prod)."
+      "Set it in .env.local — generate one with `openssl rand -hex 32`."
     );
   }
   const cookieStore = await cookies();

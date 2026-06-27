@@ -101,7 +101,7 @@ export function LoginScreen() {
       {/* Footer attribution */}
       <div className="absolute bottom-5 left-0 right-0 flex justify-center">
         <a
-          href="https://ratlabs.tech"
+          href="https://github.com/labrat-0/git-map"
           target="_blank"
           rel="noopener noreferrer"
           className="font-mono text-[10px] tracking-[0.12em] no-underline transition-colors duration-150"
@@ -113,7 +113,7 @@ export function LoginScreen() {
             e.currentTarget.style.color = "#2a2a2a";
           }}
         >
-          presented by ratlabs.tech
+          open source · MIT
         </a>
       </div>
     </main>
