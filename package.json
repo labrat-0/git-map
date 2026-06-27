@@ -1,7 +1,9 @@
 {
-  "name": "gm-scaffold",
+  "name": "git-map",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "description": "Interactive 2D map of any GitHub repo's branch/commit topology, with optional BYOK AI commit summaries. Runs locally.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
