@@ -25,10 +25,9 @@ no account beyond your own GitHub.
 
 <div align="center">
 
-<!-- SCREENSHOT SLOT: drop the image at docs/screenshot.png and uncomment the line below -->
-<!-- <img src="docs/screenshot.png" alt="git-map — a repo's branches and commits as a 2D map" width="820" /> -->
+<img src="docs/screenshot.png" alt="git-map — a repo's branches and commits as a 2D map" width="820" />
 
-<sub>📸 Screenshot coming soon — a repo's branch/commit topology, rendered as an explorable canvas.</sub>
+<sub>A repo's branch/commit topology, rendered as an explorable canvas — with inline commit diffs and optional AI summaries.</sub>
 
 </div>
 
