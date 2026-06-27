@@ -11,6 +11,8 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+[**Why**](#why-git-map) · [**How it works**](#how-it-works) · [**Quickstart**](#run-it-locally) · [**Troubleshooting**](#troubleshooting-sign-in)
+
 </div>
 
 > Interactive 2D map of any GitHub repo's branch/commit topology — sign in with
@@ -20,6 +22,15 @@
 Runs entirely on your own machine. A single Next.js app — UI + API routes +
 GitHub OAuth in one process. No external backend, no payment, no telemetry,
 no account beyond your own GitHub.
+
+<div align="center">
+
+<!-- SCREENSHOT SLOT: drop the image at docs/screenshot.png and uncomment the line below -->
+<!-- <img src="docs/screenshot.png" alt="git-map — a repo's branches and commits as a 2D map" width="820" /> -->
+
+<sub>📸 Screenshot coming soon — a repo's branch/commit topology, rendered as an explorable canvas.</sub>
+
+</div>
 
 ## Why git-map
 
